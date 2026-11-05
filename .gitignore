@@ -1,0 +1,11 @@
+# image cache downloaded by scripts/fetch_ink_paintings.py
+data/images/
+__pycache__/
+*.pyc
+.venv/
+.DS_Store
+Thumbs.db
+# fetch run artifacts
+data/fetch.log
+data/rejected_ids.json
+data/hf_metadata.parquet

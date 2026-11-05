@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Ink Echo">
+  <meta name="theme-color" content="#f3eee3">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <link rel="icon" type="image/png" href="icon-180.png">
+  <title>Ink Echo</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main id="stage">
+    <div id="ghost" aria-hidden="true"></div>
+    <canvas id="reveal" aria-hidden="true"></canvas>
+    <canvas id="ink" aria-label="Drawing surface"></canvas>
+    <div id="hint">
+      <p class="title">Ink Echo</p>
+      <p>Draw a line. Ink paintings from The Met answer it.</p>
+      <p class="sub" id="status">Loading the collection…</p>
+    </div>
+  </main>
+
+  <nav id="toolbar">
+    <button id="undo" aria-label="Undo last stroke">Undo</button>
+    <button id="clear" aria-label="Clear drawing">Clear</button>
+    <button id="mode" aria-label="Display mode">Ghost</button>
+    <button id="ink-toggle" aria-pressed="true" aria-label="Show my strokes">Lines</button>
+  </nav>
+
+  <aside id="caption" hidden>
+    <button id="caption-open" aria-label="About this work">
+      <span id="caption-title"></span>
+      <span id="caption-meta"></span>
+    </button>
+  </aside>
+
+  <section id="matches" aria-label="Matching works"></section>
+
+  <dialog id="sheet">
+    <form method="dialog"><button class="close" aria-label="Close">Close</button></form>
+    <img id="sheet-img" alt="">
+    <h2 id="sheet-title"></h2>
+    <p id="sheet-meta"></p>
+    <p id="sheet-medium"></p>
+    <p class="sheet-actions">
+      <a id="sheet-link" target="_blank" rel="noopener">View on metmuseum.org</a>
+      <button id="sheet-next" type="button">Show another match</button>
+    </p>
+    <p class="credit">The Metropolitan Museum of Art, Open Access (CC0)</p>
+  </dialog>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
