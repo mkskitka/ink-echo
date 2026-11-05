@@ -1,0 +1,14 @@
+{
+  "name": "Ink Echo",
+  "short_name": "Ink Echo",
+  "description": "Draw a line; ink paintings from The Met answer it.",
+  "start_url": "./",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#f3eee3",
+  "theme_color": "#f3eee3",
+  "icons": [
+    { "src": "icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
