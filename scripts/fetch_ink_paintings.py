@@ -2,9 +2,11 @@
 
 Uses /public/collection/v1.1/search (the v1 search endpoint was retired
 2026-10-01). v1.1 is paginated: limit <= 500 and offset + limit <= 10,000.
-The docs ask for <= 80 requests/second. In practice the API sits behind an
-Imperva firewall that answers *parallel* connections with HTTP 403, so the
-default is one worker at 10 req/s (~15 min for the full ~4k-work corpus).
+The docs ask for <= 80 requests/second. In practice the API sits behind a
+firewall that starts answering HTTP 403 under sustained or parallel load, so
+we use one connection, and treat 403/429 as "slow down": pause everything,
+halve the rate, and leave unfinished objects for the next run. A full corpus
+download can therefore take a few hours; it is incremental and resumable.
 
 Docs: https://metmuseum.github.io/
 
@@ -43,19 +45,51 @@ adapter = requests.adapters.HTTPAdapter(pool_connections=16, pool_maxsize=16)
 session.mount("https://", adapter)
 
 
+class Throttled(Exception):
+    """Server kept refusing; leave the object for a later run (don't mark rejected)."""
+
+
 class RateLimiter:
+    """Polite pacing with adaptive slow-down: any 403/429 from the server's
+    firewall pauses *all* requests (honoring Retry-After when given) and halves
+    our rate; sustained success slowly speeds back up to the configured cap."""
+
     def __init__(self, rps):
-        self.interval = 1.0 / rps
+        self.set_rate(rps)
         self.lock = threading.Lock()
         self.next = 0.0
+        self.paused_until = 0.0
+        self.ok_streak = 0
+
+    def set_rate(self, rps):
+        self.max_rps = rps
+        self.rps = rps
+        self.interval = 1.0 / rps
 
     def wait(self):
         with self.lock:
             now = time.monotonic()
-            t = max(now, self.next)
+            t = max(now, self.next, self.paused_until)
             self.next = t + self.interval
         if t > now:
             time.sleep(t - now)
+
+    def success(self):
+        with self.lock:
+            self.ok_streak += 1
+            if self.ok_streak >= 200 and self.rps < self.max_rps:
+                self.rps = min(self.max_rps, self.rps * 1.25)
+                self.interval = 1.0 / self.rps
+                self.ok_streak = 0
+
+    def refused(self, retry_after=None):
+        with self.lock:
+            self.ok_streak = 0
+            self.rps = max(0.5, self.rps / 2)
+            self.interval = 1.0 / self.rps
+            pause = retry_after if retry_after else 60.0
+            self.paused_until = max(self.paused_until, time.monotonic() + pause)
+            print(f"  server refused request; pausing {pause:.0f}s, rate now {self.rps:.1f}/s", flush=True)
 
 
 limiter = RateLimiter(10)
@@ -71,7 +105,7 @@ def note_retry(reason):
 
 
 def get(url, **params):
-    for attempt in range(5):
+    for attempt in range(4):
         limiter.wait()
         try:
             r = session.get(url, params=params, timeout=30)
@@ -81,17 +115,23 @@ def get(url, **params):
             continue
         if r.status_code == 404:
             return None
-        if r.status_code in (403, 429, 500, 502, 503, 504):
+        if r.status_code in (403, 429):
             note_retry(f"HTTP {r.status_code} {url.split('/')[2]}")
+            ra = r.headers.get("Retry-After")
+            limiter.refused(float(ra) if ra and ra.isdigit() else None)
+            continue
+        if r.status_code >= 500:
+            note_retry(f"HTTP {r.status_code}")
             time.sleep(2 ** attempt)
             continue
         if "json" not in r.headers.get("Content-Type", "") and "/collection/" in url:
-            note_retry("non-JSON (bot challenge?)")
-            time.sleep(2 ** attempt)
+            note_retry("non-JSON response")
+            limiter.refused()
             continue
         r.raise_for_status()
+        limiter.success()
         return r
-    return None
+    raise Throttled(url)
 
 
 def search_ids(q, medium):
@@ -156,7 +196,7 @@ def main():
     ap.add_argument("--rps", type=float, default=10, help="request rate cap (API limit is 80)")
     ap.add_argument("--workers", type=int, default=1, help=">1 tends to trigger HTTP 403s from the firewall")
     args = ap.parse_args()
-    limiter.interval = 1.0 / min(args.rps, 75)
+    limiter.set_rate(min(args.rps, 75))
 
     IMAGES.mkdir(parents=True, exist_ok=True)
     out_path = DATA / "objects.json"
@@ -188,6 +228,8 @@ def main():
             done += 1
             try:
                 rec = f.result()
+            except Throttled:
+                continue  # not rejected: retried on the next run
             except Exception as e:  # keep going on odd records
                 print(f"  error {oid}: {e}", flush=True)
                 continue

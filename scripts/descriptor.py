@@ -10,13 +10,19 @@ Descriptor: an oriented-gradient histogram (a tiny HOG).
   4. GRID x GRID spatial cells x BINS orientation bins, weighted by magnitude.
   5. L2 normalise.
 
-`ink_map()` turns a painting into an ink image: it uses the *brightest* RGB
-channel (so red seals and colored pigments read as paper, black ink as ink),
-subtracts a heavily blurred background (so yellowed silk doesn't read as ink),
-then stretches contrast.
+`ink_map()` turns a painting into an ink image:
+  - brightest RGB channel, so red seals and colored pigment read as paper and
+    only black ink reads as ink;
+  - 3x3 median to quiet silk weave;
+  - black top-hat (morphological closing minus image) with a disc ~1/12 of the
+    short side: keeps dark *strokes* up to that width but drops broad tonal
+    areas (fan silk, mount borders, photo backgrounds) that otherwise create
+    huge false contours;
+  - noise floor + contrast stretch.
 """
+import cv2
 import numpy as np
-from PIL import Image, ImageFilter
+from PIL import Image
 
 SIZE = 64
 GRID = 4
@@ -66,14 +72,14 @@ def ink_map(im: Image.Image, short_side: int = 256, max_long: int = 4096) -> np.
     if max(w, h) * scale > max_long:
         scale = max_long / max(w, h)
     rgb = rgb.resize((max(1, round(w * scale)), max(1, round(h * scale))), Image.BILINEAR)
-    a = np.asarray(rgb, dtype=np.float64) / 255.0
-    value = a.max(axis=2)  # brightest channel: seals & color -> light
-    v_img = Image.fromarray((value * 255).astype(np.uint8))
-    bg = np.asarray(v_img.filter(ImageFilter.GaussianBlur(radius=min(rgb.size) / 6)),
-                    dtype=np.float64) / 255.0
-    ink = np.clip(bg - value, 0.0, 1.0)
-    hi = np.percentile(ink, 99.5)
-    return np.clip(ink / max(hi, 0.05), 0.0, 1.0)
+    value = cv2.medianBlur(np.asarray(rgb).max(axis=2).astype(np.uint8), 3)
+    k = max(3, (min(value.shape) // 12) | 1)
+    disc = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k, k))
+    closed = cv2.morphologyEx(value, cv2.MORPH_CLOSE, disc)
+    ink = (closed.astype(np.float64) - value) / 255.0
+    floor = 0.035
+    hi = max(np.percentile(ink, 99.5), 0.12)
+    return np.clip((ink - floor) / (hi - floor), 0.0, 1.0)
 
 
 def crop_resize(ink: np.ndarray, x: float, y: float, s: float) -> np.ndarray:
