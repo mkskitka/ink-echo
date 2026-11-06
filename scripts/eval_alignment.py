@@ -318,7 +318,7 @@ def main():
             sc = score(q, r)
             if args.sheet and len(tiles) < 24:
                 tiles.append(tile(q, r))
-            rows.append({"kind": q["kind"], "work": r["id"], "ms": r["ms"], "src": q.get("src"), **sc})
+            rows.append({"kind": q["kind"], "work": r["id"], "ms": r["ms"], "src": q.get("src"), "wfollow": r.get("follow", 0), **sc})
         b.close()
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / f"{args.tag}.json").write_text(json.dumps(rows, indent=1))

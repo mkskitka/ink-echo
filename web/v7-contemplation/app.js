@@ -122,9 +122,10 @@ function candidates() {
   return out;
 }
 
+let reroll = 0;
 function prepareChoices() {
   const day = Math.floor(Date.now() / 864e5);
-  const rnd = mulberry(day * 7919);
+  const rnd = mulberry(day * 7919 + reroll * 104729);
   const pool = candidates();
   const picks = [];
   while (picks.length < 3 && pool.length) picks.push(pool.splice(Math.floor(rnd() * pool.length), 1)[0]);
@@ -146,6 +147,8 @@ function prepareChoices() {
     return b;
   }));
 }
+
+$("others").onclick = () => { reroll++; if (engine) prepareChoices(); };
 
 // ---------------------------------------------------------------- 3. slow looking
 let S = null; // session: {work, w, img, ink, regions, ri, cam, mask, maskData, visited, frontier, budget, layer}
@@ -213,7 +216,18 @@ function poseFrame(cam) {
   return { pose: { cx: cam.cx, cy: cam.cy, s: S0 / cam.k, th: 0 }, frame: { cx: view.clientWidth / 2, cy: view.clientHeight / 2, S: S0 } };
 }
 
-brush.on("start", () => document.body.classList.add("quiet"));
+// breath and stroke: painters were taught to move the brush on the out-breath
+let onExhale = 0, strokesN = 0, breathNoted = false;
+brush.on("start", () => {
+  document.body.classList.add("quiet");
+  strokesN++; if (!inhale) onExhale++;
+  if (!breathNoted && strokesN >= 6) {
+    breathNoted = true;
+    whisper(onExhale / strokesN >= 0.6
+      ? "Most of your strokes began as you breathed out. That is how the brush was taught: the stroke rides the breath."
+      : "Try beginning each stroke as you breathe out, when the ring contracts. Let the stroke ride the breath.", 9000);
+  }
+});
 brush.on("end", (stroke) => {
   if (!S || S.camT < 1) return;
   const { pose, frame } = poseFrame(S.cam);

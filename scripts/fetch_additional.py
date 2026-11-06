@@ -26,9 +26,14 @@ def main():
     ap.add_argument("--max-long", type=int, default=3072)
     ap.add_argument("--rps", type=float, default=4)
     ap.add_argument("--reverse", action="store_true", help="work from the end (run a second copy to halve the time)")
+    ap.add_argument("--books", action="store_true", help="only illustrated books, prints and drawings (manual pages)")
     args = ap.parse_args()
     det = json.loads((ROOT / "data" / "details.json").read_text(encoding="utf-8"))
     cur = json.loads((ROOT / "data" / "curated.json").read_text())
+    if args.books:
+        objs = json.loads((ROOT / "data" / "objects.json").read_text(encoding="utf-8"))
+        bookish = {o["id"] for o in objs if (o.get("classification") or "").lower() in ("illustrated books", "prints", "drawings")}
+        cur = [c for c in cur if c in bookish]
     jobs = [(oid, k, u) for oid in cur for k, u in enumerate(det.get(str(oid), {}).get("additionalImages") or [])]
     todo = [j for j in jobs if not (ROOT / "web" / "hi" / f"{j[0]}_{j[1]}.jpg").exists()]
     if args.reverse:

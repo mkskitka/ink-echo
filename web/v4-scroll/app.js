@@ -51,7 +51,7 @@ async function match() {
     const r = await engine.match(strokes.filter((s) => s.t1), { k: 28, alignK: 5, exclude: used });
     if (!r || !r.results.length) return;
     // only passages where a painted stroke really continues yours
-    const ok = r.results.filter((x) => x.follow >= 0.3);
+    const ok = r.results.filter((x) => x.follow >= 0.62);
     if (!ok.length) return;
     // prefer real handscrolls (wide works) when they're nearly as good
     const best = ok[0];

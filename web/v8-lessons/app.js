@@ -12,7 +12,7 @@ import { openColophon } from "../shared/colophon.js";
 import { LESSONS, TECHNIQUES, TREASURES, readStroke } from "../shared/lore.js";
 import { inkwells, toast, soundToggle } from "../shared/ui.js";
 import { BrushSound } from "../shared/brushsound.js";
-import { YONG } from "../shared/lore.js";
+import { YONG, GRIP } from "../shared/lore.js";
 
 const $ = (id) => document.getElementById(id);
 paperBackground($("paper"), { kind: "xuan" });
@@ -33,7 +33,8 @@ $("grid").replaceChildren(...LESSONS.map((l) => {
   b.onclick = () => start(l);
   return b;
 }));
-$("treasures").innerHTML = `<p><b>The four treasures of the study.</b></p>` +
+$("treasures").innerHTML = `<p><b>${GRIP.title}.</b></p>` + GRIP.steps.map((x) => `<p>${x}</p>`).join("") +
+  `<p style="margin-top:14px"><b>The four treasures of the study.</b></p>` +
   Object.entries(TREASURES).map(([k, v]) => `<p><b>${{ brush: "Brush", ink: "Ink", stone: "Inkstone", paper: "Paper and silk" }[k]}.</b> ${v}</p>`).join("");
 
 function start(l) {
@@ -155,7 +156,7 @@ async function meetMaster(stroke) {
     const r = await engine.match([stroke], { k: 24, alignK: 4, exclude: used, only });
     if (!r || !r.results.length) return;
     const best = r.results[0];
-    if (best.follow < 0.25) { note({ text: "No master's stroke quite like that one in the collection. Try again, closer to the model.", kind: "try" }); return; }
+    if (best.follow < 0.55) { note({ text: "No master's stroke quite like that one in the collection. Try again, closer to the model.", kind: "try" }); return; }
     const p = await renderPassage(engine, best, r.frame, [stroke], { band: Math.max(50, r.frame.S * 0.35), inkOnly: true });
     windows.push({ ...p, work: best.work, born: performance.now() });
     encounters.push({ work: best.work, pose: best.pose, frame: r.frame, strokes: [stroke], warp: best.warp });

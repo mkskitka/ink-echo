@@ -47,7 +47,7 @@ async function addFragment(stroke) {
     const used = fragments.slice(-8).map((f) => f.work);
     const r = await engine.match([stroke], { k: 28, alignK: 3, exclude: used });
     if (!r || !r.results.length || !pad.strokes.includes(stroke)) return;
-    const best = r.results.find((x) => x.follow >= 0.25) || r.results[0];
+    const best = r.results.find((x) => x.follow >= 0.6) || r.results[0];
     const p = await renderPassage(engine, best, r.frame, [stroke], { band: Math.max(44, r.frame.S * 0.4) });
     fragments.push({ stroke, work: best.work, pose: best.pose, frame: r.frame, passage: p, born: performance.now(),
       color: COLORS[fragments.length % COLORS.length] });

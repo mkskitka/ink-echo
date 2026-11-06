@@ -31,7 +31,7 @@ def main():
     print(f"curated {len(keep)} of {len(objs)} works; dropped {why}")
     # views: the Met's additional images of curated works (album leaves, details)
     kept = set(map(str, keep))
-    MAX_VIEWS = 10
+    MAX_VIEWS = 16
     books = {str(o["id"]) for o in objs if (o.get("classification") or "").lower() in ("illustrated books", "prints")}
     per = {}
     views, vwhy = [], {"pigment": 0, "backdrop": 0, "cap": 0}

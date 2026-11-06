@@ -66,7 +66,7 @@ async function setAnchor(strokes) {
   const prev = anchor ? anchor.work : null;
   const r = await engine.match(strokes, { k: 28, alignK: 6, exclude: prev != null ? [prev] : [] });
   if (!r || !r.results.length) return;
-  const best = r.results.find((x) => x.follow >= 0.25) || r.results[0];
+  const best = r.results.find((x) => x.follow >= 0.6) || r.results[0];
   const w = engine.works[best.work];
   const [img, ink] = await Promise.all([engine.loadPainting(best.work), engine.ensureInk(best.work)]);
   const mask = document.createElement("canvas"); mask.width = ink.W; mask.height = ink.H;

@@ -52,8 +52,9 @@ void main(){
   if (r > 1.0) discard;
   // side tip: the footprint is a wedge, heavy on one edge (the belly) and
   // light on the other (the point); centred tip is round and even
-  float tip = v2.z;
-  float wedge = mix(1.0, smoothstep(-1.1, 0.9, q.y), tip);
+  float tip = abs(v2.z);
+  float side = v2.z < 0.0 ? -q.y : q.y;               // the belly lies on the side the brush leans
+  float wedge = mix(1.0, smoothstep(-1.1, 0.9, side), tip);
   float fall = (1.0 - smoothstep(0.62, 1.0, r)) * wedge;
   // bristle lanes run along the stroke (q.y is across it)
   float lanes = mix(11.0, 20.0, tip);
@@ -150,7 +151,8 @@ void main(){
   vec2 fu = uv * ftile;
   float fib = texture(F, fu).r, grain = texture(F, fu * 2.7 + 0.31).g;
   // optical density of settled + still-wet pigment; pigment lodges in the fibres (granulation)
-  float dens = c.b * (0.82 + 0.36 * grain) + c.g * 0.75;
+  // wet ink reads darker and glossier; sumi dries a little lighter and matte
+  float dens = c.b * (0.82 + 0.36 * grain) + c.g * 1.15;
   float a = 1.0 - exp(-dens * 2.8 * tone);
   // wet paper turns slightly translucent and darker
   float wet = smoothstep(0.0, 0.5, c.r) * 0.07 * (0.7 + 0.3 * fib);

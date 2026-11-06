@@ -14,7 +14,7 @@ import { BrushSound } from "../shared/brushsound.js";
 const $ = (id) => document.getElementById(id);
 const DRIFT = 20;          // px / s the scroll unrolls
 const WINDOW_MS = 3500;    // gestures younger than this are matched together
-const MIN_FOLLOW = 0.3;    // below this share of your line on a painted stroke, lay nothing
+const MIN_FOLLOW = 0.62;   // below this share of your line on a painted stroke, lay nothing
 
 let paperKind = "xuan";
 paperBackground($("paper"), { kind: paperKind });
