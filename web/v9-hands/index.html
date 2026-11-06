@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#efe6d2">
+  <link rel="icon" type="image/png" href="../icon-180.png">
+  <link rel="apple-touch-icon" href="../icon-180.png">
+  <title>Ink Echo · Many Hands</title>
+  <link rel="stylesheet" href="../shared/base.css">
+  <style>
+    html, body { background: #efe6d2; }
+    #paper { z-index: 0; } #windows { z-index: 1; mix-blend-mode: multiply; } #ink { z-index: 2; } #hit { z-index: 3; }
+    .hands { position: fixed; left: 68px; right: 12px; bottom: calc(env(safe-area-inset-bottom) + 10px); z-index: 5;
+      display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+    .hand { flex: 0 0 auto; max-width: 250px; background: rgba(243,238,227,.92); border-radius: 10px; padding: 7px 10px;
+      border-top: 3px solid var(--c); font: 12.5px/1.35 system-ui, sans-serif; color: #3d3830; animation: in .5s ease; }
+    .hand b { font: 600 13.5px/1.25 Georgia, serif; display: block; color: #1b1915; }
+    .hand a { color: #7a2a22; }
+    @keyframes in { from { opacity: 0; transform: translateY(6px); } }
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <canvas class="layer" id="paper"></canvas>
+    <canvas class="layer" id="windows"></canvas>
+    <canvas class="layer" id="ink"></canvas>
+    <canvas class="pad" id="hit"></canvas>
+  </div>
+  <div class="badge"><b>Many Hands</b>Each stroke meets a different master</div>
+  <nav class="toolbar">
+    <a href="../">Versions</a>
+    <button id="clear">New sheet</button>
+    <button id="doneBtn">Compare the hands</button>
+  </nav>
+  <div class="hint" id="hint">
+    <p class="title">Many Hands</p>
+    <p>Every stroke you make opens a window onto a different painting, where a master's stroke runs the way yours does.</p>
+    <p>Vary your strokes: slow and pressed, quick and dry, pale, dark. Then compare the hands you met.</p>
+    <p class="sub" id="status">Loading…</p>
+  </div>
+  <div class="hands" id="hands"></div>
+  <div class="busy" id="busy"></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

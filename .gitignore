@@ -9,3 +9,6 @@ Thumbs.db
 data/fetch.log
 data/rejected_ids.json
 data/hf_metadata.parquet
+web/hi/
+data/eval/
+data/*.log

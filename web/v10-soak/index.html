@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#efe6d2">
+  <link rel="icon" type="image/png" href="../icon-180.png">
+  <link rel="apple-touch-icon" href="../icon-180.png">
+  <title>Ink Echo · Soak</title>
+  <link rel="stylesheet" href="../shared/base.css">
+  <style>
+    html, body { background: #efe6d2; }
+    #paper { z-index: 0; } #ghost { z-index: 1; mix-blend-mode: multiply; } #reveal { z-index: 1; mix-blend-mode: multiply; } #ink { z-index: 2; } #hit { z-index: 3; }
+    .flowmeter { position: fixed; left: 12px; top: calc(env(safe-area-inset-top) + 62px); z-index: 5; font: 13px system-ui, sans-serif; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <canvas class="layer" id="paper"></canvas>
+    <canvas class="layer" id="ghost"></canvas>
+    <canvas class="layer" id="reveal"></canvas>
+    <canvas class="layer" id="ink"></canvas>
+    <canvas class="pad" id="hit"></canvas>
+  </div>
+  <div class="badge"><b>Soak</b>The painting rises through the paper</div>
+  <div class="flowmeter" id="flowmeter"></div>
+  <nav class="toolbar">
+    <a href="../">Versions</a>
+    <button id="paperBtn">Xuan paper</button>
+    <button id="ghostBtn" aria-pressed="false">Hint</button>
+    <button id="clear">New sheet</button>
+    <button id="doneBtn">Colophon</button>
+  </nav>
+  <div class="hint" id="hint">
+    <p class="title">Soak</p>
+    <p>Draw a line. Where it meets a painter's ink, their brushwork soaks up through the paper and spreads along their strokes, the way wet ink travels through fibre.</p>
+    <p>Keep drawing along what appears. On xuan paper it feathers; on silk it stays crisp.</p>
+    <p class="sub" id="status">Loading…</p>
+  </div>
+  <div class="caption" id="caption" hidden></div>
+  <div class="busy" id="busy"></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

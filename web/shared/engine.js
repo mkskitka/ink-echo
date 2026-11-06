@@ -46,7 +46,28 @@ export class Engine {
     return (await this._call({ type: "coarse", desc, ...opts })).top;
   }
 
+  /** Sharpest image we can show for a work: our hi-res copy when built, else the Met's web-large. */
+  imageURL(work) {
+    const w = this.works[work];
+    return w.hi ? this.base + w.hi : w.image;
+  }
+
+  /** The painting as an <img>: hi-res copy when the server has it, else the Met's. */
+  loadPainting(work) {
+    const w = this.works[work];
+    if (!w.hi || this.noHi) return loadImage(w.image);
+    return loadImage(this.base + w.hi).catch(() => { this.noHi = true; return loadImage(w.image); });
+  }
+
   ensureInk(work) {
+    if (this.inkLoads.has(work)) {          // LRU touch
+      const p = this.inkLoads.get(work);
+      this.inkLoads.delete(work); this.inkLoads.set(work, p);
+    }
+    while (this.inkLoads.size > 40) {       // the worker keeps 48; stay under it
+      const old = this.inkLoads.keys().next().value;
+      this.inkLoads.delete(old); this.ink.delete(old);
+    }
     if (!this.inkLoads.has(work)) {
       const id = this.works[work].id;
       const p = loadImage(`${this.base}ink/${id}.jpg`).then(async (img) => {
@@ -70,7 +91,10 @@ export class Engine {
 
   async align(pts, works, opts = {}) {
     await Promise.all(works.map((w) => this.ensureInk(w).catch(() => null)));
-    return (await this._call({ type: "align", works, pts, opts })).results;
+    const res = (await this._call({ type: "align", works, pts, opts })).results;
+    const got = new Set(res.map((r) => r.work));
+    for (const w of works) if (!got.has(w)) { this.inkLoads.delete(w); this.ink.delete(w); } // evicted: reload next time
+    return res;
   }
 
   async cost(pts, work, pose) {
@@ -78,11 +102,25 @@ export class Engine {
     return (await this._call({ type: "cost", work, pts, pose })).cost;
   }
 
+  /** While a stroke is still being drawn: guess the likely paintings and start
+   *  loading their ink maps, so matching at pen-up doesn't wait on the network.
+   *  Throttled; safe to call on every pointer move. */
+  warm(strokes, { k = 20, exclude = [], only = null } = {}) {
+    const now = performance.now();
+    if (this._warmBusy || now - (this._warmT || 0) < 350) return;
+    const s = samplePoints(strokes);
+    if (!s || s.length < 40) return;
+    this._warmT = now; this._warmBusy = true;
+    this.coarse(drawingDescriptor(strokes, s.frame), { k, masked: true, exclude, only })
+      .then((top) => { for (const t of top.slice(0, 12)) this.ensureInk(t.work).catch(() => {}); })
+      .finally(() => { this._warmBusy = false; });
+  }
+
   /** Coarse prefilter then chamfer alignment: the standard "find me paintings" call. */
-  async match(strokes, { k = 12, alignK = 6, opts = {}, include = [], exclude = [] } = {}) {
+  async match(strokes, { k = 28, alignK = 6, opts = {}, include = [], exclude = [], only = null } = {}) {
     const s = samplePoints(strokes);
     if (!s) return null;
-    const top = await this.coarse(drawingDescriptor(strokes, s.frame), { k, masked: true, exclude });
+    const top = await this.coarse(drawingDescriptor(strokes, s.frame), { k: Math.max(k, 28), masked: true, exclude, only });
     const works = [...new Set([...include, ...top.map((t) => t.work)])];
     const res = await this.align(s.pts, works, opts);
     return { frame: s.frame, pts: s.pts, results: res.slice(0, alignK), coarse: top };
@@ -91,7 +129,10 @@ export class Engine {
 
 // ---------------------------------------------------------------- geometry
 const imageCache = new Map();
+const IMAGE_CACHE = 10;     // hi-res decodes are big; iOS Safari has little memory
 export function loadImage(url) {
+  if (imageCache.has(url)) { const p = imageCache.get(url); imageCache.delete(url); imageCache.set(url, p); }
+  while (imageCache.size >= IMAGE_CACHE) imageCache.delete(imageCache.keys().next().value);
   if (!imageCache.has(url)) {
     imageCache.set(url, new Promise((resolve, reject) => {
       const img = new Image();
@@ -179,6 +220,54 @@ export function imageAffine(pose, frame, inkW, imgW) {
   const [a, b, c, d, e, f] = poseAffine(pose, frame);
   const u = inkW / imgW;
   return [a * u, b * u, c * u, d * u, e, f];
+}
+
+// ---------------------------------------------------------------- snap warp
+// The worker returns residuals [x, y, dx, dy]* (frame units): where your line is,
+// and how far off the painted line lies. A smooth field built from them lets
+// views bend the painting a little so the painter's stroke sits exactly under
+// yours. Kept identical to scripts/eval_alignment.py (warp_at).
+export const WARP = { sigma: 0.06, clamp: 0.05, norm: 1.5, smooth: 3 };
+
+export function warpField(warp, frame) {
+  if (!warp || !warp.length) return null;
+  const n = warp.length / 4;
+  // smooth offsets along the line (neighbouring samples), keeping zeros as anchors
+  const sx = new Float32Array(n), sy = new Float32Array(n), px = new Float32Array(n), py = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    let ax = 0, ay = 0, c = 0;
+    for (let j = Math.max(0, i - WARP.smooth); j <= Math.min(n - 1, i + WARP.smooth); j++) {
+      ax += warp[j * 4 + 2]; ay += warp[j * 4 + 3]; c++;
+    }
+    px[i] = warp[i * 4]; py[i] = warp[i * 4 + 1]; sx[i] = ax / c; sy[i] = ay / c;
+  }
+  const s2 = 2 * WARP.sigma * WARP.sigma;
+  /** content shift at screen point (x, y), in screen px: show what lies at p + D(p) */
+  const at = (x, y) => {
+    const u = (x - frame.cx) / frame.S, v = (y - frame.cy) / frame.S;
+    let gx = 0, gy = 0, gs = 0;
+    for (let i = 0; i < n; i++) {
+      const d2 = (u - px[i]) ** 2 + (v - py[i]) ** 2;
+      if (d2 > 9 * s2) continue;
+      const g = Math.exp(-d2 / s2);
+      gx += g * sx[i]; gy += g * sy[i]; gs += g;
+    }
+    const k = 1 / Math.max(gs, WARP.norm);
+    let dx = gx * k, dy = gy * k;
+    const m = Math.hypot(dx, dy);
+    if (m > WARP.clamp) { dx *= WARP.clamp / m; dy *= WARP.clamp / m; }
+    return [dx * frame.S, dy * frame.S];
+  };
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity, any = false;
+  for (let i = 0; i < n; i++) {
+    if (sx[i] || sy[i]) any = true;
+    x0 = Math.min(x0, px[i]); y0 = Math.min(y0, py[i]); x1 = Math.max(x1, px[i]); y1 = Math.max(y1, py[i]);
+  }
+  if (!any) return null;
+  const pad = WARP.sigma * 2.5;
+  const box = [frame.cx + (x0 - pad) * frame.S, frame.cy + (y0 - pad) * frame.S,
+               frame.cx + (x1 + pad) * frame.S, frame.cy + (y1 + pad) * frame.S];
+  return { at, box };
 }
 
 export const cssMatrix = (m) => `matrix(${m.map((v) => +v.toFixed(5)).join(",")})`;

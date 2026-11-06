@@ -18,7 +18,11 @@ Descriptor: an oriented-gradient histogram (a tiny HOG).
     short side: keeps dark *strokes* up to that width but drops broad tonal
     areas (fan silk, mount borders, photo backgrounds) that otherwise create
     huge false contours;
-  - noise floor + contrast stretch.
+  - noise floor + contrast stretch;
+  - optionally (`suppress_lines`) erase long, straight, axis-aligned lines:
+    mount edges, screen frames, scroll rollers and photo borders. Brushwork is
+    almost never ruler-straight for a quarter of the picture, but these edges
+    otherwise attract every straight-ish gesture.
 """
 import cv2
 import numpy as np
@@ -64,14 +68,38 @@ def descriptor(ink: np.ndarray) -> np.ndarray:
     return hist / n if n > 0 else hist
 
 
-def ink_map(im: Image.Image, short_side: int = 256, max_long: int = 4096) -> np.ndarray:
+def suppress_long_lines(ink: np.ndarray, frac: float = 0.22) -> np.ndarray:
+    """Zero out long, *thin*, straight horizontal/vertical runs (mount edges,
+    frames, panel seams, photo borders). Thick runs (tree trunks) are kept."""
+    h, w = ink.shape
+    b = (ink > 0.25).astype(np.uint8)
+    b = cv2.dilate(b, np.ones((3, 3), np.uint8))           # tolerate slight photo tilt
+    t = max(5, int(min(h, w) * 0.012)) + 2                  # max thickness of a "line"
+    kill = np.zeros_like(b)
+    m = max(4, int(min(h, w) * 0.07))
+    edge = np.zeros_like(b, dtype=bool)
+    edge[:m] = edge[-m:] = True
+    edge[:, :m] = edge[:, -m:] = True
+    for along, across in (((1, max(15, int(w * frac))), (t, 1)), ((max(15, int(h * frac)), 1), (1, t))):
+        run = cv2.morphologyEx(b, cv2.MORPH_OPEN, np.ones(along, np.uint8))
+        thick = cv2.morphologyEx(b, cv2.MORPH_OPEN, np.ones(across, np.uint8))
+        kill |= run & (1 - thick)
+        kill[edge] |= run[edge]                             # frames: any thickness near the border
+    if kill.any():
+        kill = cv2.dilate(kill, np.ones((5, 5), np.uint8))
+        ink = ink.copy()
+        ink[kill > 0] = 0.0
+    return ink
+
+
+def ink_map(im: Image.Image, short_side: int = 256, max_long: int = 4096, suppress_lines: bool = True) -> np.ndarray:
     """Painting -> float ink map (1 = ink) at a working resolution."""
     rgb = im.convert("RGB")
     w, h = rgb.size
     scale = short_side / min(w, h)
     if max(w, h) * scale > max_long:
         scale = max_long / max(w, h)
-    rgb = rgb.resize((max(1, round(w * scale)), max(1, round(h * scale))), Image.BILINEAR)
+    rgb = rgb.resize((max(1, round(w * scale)), max(1, round(h * scale))), Image.BOX if scale < 0.5 else Image.BILINEAR)
     value = cv2.medianBlur(np.asarray(rgb).max(axis=2).astype(np.uint8), 3)
     k = max(3, (min(value.shape) // 12) | 1)
     disc = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k, k))
@@ -79,7 +107,8 @@ def ink_map(im: Image.Image, short_side: int = 256, max_long: int = 4096) -> np.
     ink = (closed.astype(np.float64) - value) / 255.0
     floor = 0.035
     hi = max(np.percentile(ink, 99.5), 0.12)
-    return np.clip((ink - floor) / (hi - floor), 0.0, 1.0)
+    ink = np.clip((ink - floor) / (hi - floor), 0.0, 1.0)
+    return suppress_long_lines(ink) if suppress_lines else ink
 
 
 def crop_resize(ink: np.ndarray, x: float, y: float, s: float) -> np.ndarray:
