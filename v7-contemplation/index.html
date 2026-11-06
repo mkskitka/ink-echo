@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#ebe3d0">
+  <link rel="icon" type="image/png" href="../icon-180.png">
+  <link rel="apple-touch-icon" href="../icon-180.png">
+  <title>Ink Echo · Contemplation</title>
+  <link rel="stylesheet" href="../shared/base.css">
+  <style>
+    html, body { background: #ebe3d0; }
+    #paper { z-index: 0; } #view { z-index: 1; mix-blend-mode: multiply; } #ink { z-index: 2; } #hit { z-index: 3; }
+    .breath { position: fixed; right: 18px; bottom: calc(env(safe-area-inset-bottom) + 22px); z-index: 5; width: 46px; height: 46px; pointer-events: none; }
+    .breath i { position: absolute; inset: 0; border-radius: 50%; border: 1.5px solid rgba(60,45,25,.45); transform: scale(.55); transition: transform 4s ease-in-out, opacity 4s; }
+    .breath.in i { transform: scale(1); transition-duration: 4s; }
+    .breath.out i { transform: scale(.55); transition-duration: 6s; }
+    .whisper { position: fixed; left: 22px; right: 80px; bottom: calc(env(safe-area-inset-bottom) + 20px); z-index: 5; pointer-events: none;
+      font-size: 15px; line-height: 1.45; color: #4d4335; opacity: 0; transition: opacity 2.5s; max-width: 540px; }
+    .whisper.on { opacity: 1; }
+    .screen { position: fixed; inset: 0; z-index: 6; display: none; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; padding: 24px; gap: 14px; background: rgba(235,227,208,.0); }
+    .screen.on { display: flex; }
+    .screen h1 { font-weight: 400; font-size: 28px; letter-spacing: .03em; }
+    .screen p { color: #5d5243; max-width: 460px; line-height: 1.5; }
+    .screen button { font: 15px system-ui, sans-serif; border: 0; border-radius: 999px; padding: 11px 18px; background: #2a241c; color: #f1e9d6; }
+    .screen button.alt { background: rgba(27,25,21,.08); color: #2a241c; }
+    #grind { pointer-events: none; }
+    #grind > * { pointer-events: auto; }
+    #stone { width: min(78vw, 360px); aspect-ratio: 1; border-radius: 50%; touch-action: none; }
+    .meterbar { width: min(60vw, 260px); height: 6px; border-radius: 3px; background: rgba(27,25,21,.12); overflow: hidden; }
+    .meterbar i { display: block; height: 100%; width: 0; background: #1b1915; transition: width .3s; }
+    .choices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; width: min(94vw, 760px); }
+    .choices button { background: #f3eee3; color: #2a241c; padding: 8px; border-radius: 10px; text-align: left; font: 13px/1.35 Georgia, serif; }
+    .choices canvas { width: 100%; aspect-ratio: 3/4; border-radius: 6px; display: block; margin-bottom: 6px; background: #e3d9c2; }
+    .toolbar { transition: opacity 1s; }
+    body.quiet .toolbar, body.quiet .badge { opacity: .25; }
+  </style>
+</head>
+<body class="quiet">
+  <div class="stage">
+    <canvas class="layer" id="paper"></canvas>
+    <canvas class="layer" id="view"></canvas>
+    <canvas class="layer" id="ink"></canvas>
+    <canvas class="pad" id="hit"></canvas>
+  </div>
+  <div class="badge"><b>Contemplation</b><span id="workname">Slow looking</span></div>
+  <nav class="toolbar">
+    <a href="../">Versions</a>
+    <button id="next">Move along</button>
+    <button id="rest">Rest the brush</button>
+  </nav>
+  <div class="breath" id="breath"><i></i></div>
+  <div class="whisper" id="whisper"></div>
+
+  <div class="screen on" id="grind">
+    <h1>Prepare the ink</h1>
+    <p id="grindText">Before painting, ink is ground: an inkstick, a little water, slow circles on the stone. Breathe with the ring in the corner, and turn the stick in circles on the stone.</p>
+    <canvas id="stone"></canvas>
+    <div class="meterbar"><i id="meter"></i></div>
+    <button class="alt" id="skip">Skip</button>
+  </div>
+  <div class="screen" id="choose">
+    <h1>Choose a work to spend time with</h1>
+    <p>Three works from The Met, different each day. You will trace the painter's brush, passage by passage.</p>
+    <div class="choices" id="choices"></div>
+  </div>
+  <div class="busy" id="busy"></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

@@ -2,9 +2,9 @@
 // those contact points along the painter's *connected* strokes (a flood fill
 // over the ink map that bridges small gaps), revealing the work in the order a
 // brush could have travelled. Longer strokes carry more ink.
-import { Engine, imageAffine, poseAffine, screenToInk, loadImage, ptsInFrame } from "../shared/engine.js";
+import { Engine, imageAffine, poseAffine, screenToInk } from "../shared/engine.js";
 import { Pad } from "../shared/pad.js";
-import { setCaption } from "../shared/view.js";
+import { setCaption, applySoftMask, pictureEdge } from "../shared/view.js";
 
 const $ = (id) => document.getElementById(id);
 const pad = new Pad($("pad"), { base: 2.4 });
@@ -64,11 +64,11 @@ async function onStroke(stroke) {
 
 async function setAnchor(strokes) {
   const prev = anchor ? anchor.work : null;
-  const r = await engine.match(strokes, { k: 14, alignK: 6, exclude: prev != null ? [prev] : [] });
+  const r = await engine.match(strokes, { k: 28, alignK: 6, exclude: prev != null ? [prev] : [] });
   if (!r || !r.results.length) return;
-  const best = r.results[0];
+  const best = r.results.find((x) => x.follow >= 0.25) || r.results[0];
   const w = engine.works[best.work];
-  const [img, ink] = await Promise.all([loadImage(w.image), engine.ensureInk(best.work)]);
+  const [img, ink] = await Promise.all([engine.loadPainting(best.work), engine.ensureInk(best.work)]);
   const mask = document.createElement("canvas"); mask.width = ink.W; mask.height = ink.H;
   const glow = document.createElement("canvas"); glow.width = ink.W; glow.height = ink.H;
   anchor = { work: best.work, pose: best.pose, frame: r.frame, img, ink,
@@ -159,18 +159,17 @@ function paint() {
   const a = anchor;
   a.mask.getContext("2d").putImageData(a.maskData, 0, 0);
   a.glow.getContext("2d").putImageData(a.glowData, 0, 0);
-  // painting
-  g.setTransform(...imageAffine(a.pose, a.frame, a.ink.W, a.img.naturalWidth).map((v) => v * dpr));
+  // painting (hi-res), faded at its picture edge
+  const M = imageAffine(a.pose, a.frame, a.ink.W, a.img.naturalWidth);
+  g.setTransform(...M.map((v) => v * dpr));
+  g.imageSmoothingQuality = "high";
   g.drawImage(a.img, 0, 0);
-  // keep only where ink has flowed (mask in ink-map space, smoothed when scaled up)
+  pictureEdge(g, engine.works[a.work], a.img, M, [dpr, 0, 0]);
+  // keep only where ink has flowed (mask in ink-map space, softened when scaled up)
   const m = poseAffine(a.pose, a.frame).map((v) => v * dpr);
-  g.setTransform(...m);
-  g.globalCompositeOperation = "destination-in";
-  g.imageSmoothingEnabled = true;
-  g.filter = "blur(0.6px)";
-  g.drawImage(a.mask, 0, 0);
-  g.filter = "none";
+  applySoftMask(g, a.mask, m, Math.max(1.5, Math.hypot(m[0], m[1]) * 0.6));
   // the flow front
+  g.setTransform(...m);
   g.globalCompositeOperation = "source-over";
   g.drawImage(a.glow, 0, 0);
 }

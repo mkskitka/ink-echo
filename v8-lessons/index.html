@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#efe6d2">
+  <link rel="icon" type="image/png" href="../icon-180.png">
+  <link rel="apple-touch-icon" href="../icon-180.png">
+  <title>Ink Echo · Brush Lessons</title>
+  <link rel="stylesheet" href="../shared/base.css">
+  <style>
+    html, body { background: #efe6d2; }
+    #paper { z-index: 0; } #windows { z-index: 1; mix-blend-mode: multiply; } #ink { z-index: 2; } #hit { z-index: 3; }
+    .lesson { position: fixed; left: 12px; top: calc(env(safe-area-inset-top) + 62px); z-index: 5; max-width: min(460px, 70vw);
+      background: rgba(243,238,227,.86); border-radius: 12px; padding: 10px 12px; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+    .lesson h2 { font-weight: 400; font-size: 20px; }
+    .lesson p { font-size: 14px; line-height: 1.45; color: #3d3830; margin-top: 4px; }
+    .lesson .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .lesson .chips button { font: 12.5px system-ui, sans-serif; border: 0; border-radius: 999px; padding: 5px 10px; background: rgba(27,25,21,.08); }
+    .lesson.min p, .lesson.min .chips { display: none; }
+    .notes { position: fixed; right: 12px; bottom: calc(env(safe-area-inset-bottom) + 12px); z-index: 5; width: min(360px, calc(100vw - 84px));
+      display: flex; flex-direction: column; gap: 6px; pointer-events: none; }
+    .note { font: 13.5px/1.4 system-ui, sans-serif; background: rgba(243,238,227,.92); border-radius: 10px; padding: 7px 10px;
+      border-left: 3px solid #3f6b5c; animation: in .5s ease; }
+    .note.try { border-left-color: #a8322a; }
+    .note.src { border-left-color: #b0892f; pointer-events: auto; }
+    .note.src a { color: #7a2a22; }
+    @keyframes in { from { opacity: 0; transform: translateY(6px); } }
+    .picker { position: fixed; inset: 0; z-index: 8; background: #efe6d2; overflow-y: auto; padding: calc(env(safe-area-inset-top) + 70px) 16px 30px; }
+    .picker.gone { display: none; }
+    .picker h1 { font-weight: 400; font-size: 28px; text-align: center; }
+    .picker > p { text-align: center; color: #5d5243; max-width: 560px; margin: 8px auto 18px; line-height: 1.5; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; max-width: 900px; margin: 0 auto; }
+    .grid button { text-align: left; background: #f6f1e6; border: 1px solid rgba(27,25,21,.08); border-radius: 12px; padding: 14px; }
+    .grid button b { font-size: 19px; font-weight: 400; display: block; }
+    .grid button span { font: 13px/1.4 system-ui, sans-serif; color: #5d5243; display: block; margin-top: 4px; }
+    .picker .treasures { max-width: 760px; margin: 26px auto 0; font-size: 14.5px; line-height: 1.5; color: #3d3830; }
+    .picker .treasures b { font-weight: 600; }
+    .modal { position: fixed; inset: 0; z-index: 9; display: none; align-items: center; justify-content: center; background: rgba(27,25,21,.3); padding: 20px; }
+    .modal.on { display: flex; }
+    .modal div { background: #f3eee3; border-radius: 12px; padding: 16px 18px; max-width: 460px; line-height: 1.5; }
+    .modal i { color: #6d6150; font-style: normal; }
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <canvas class="layer" id="paper"></canvas>
+    <canvas class="layer" id="windows"></canvas>
+    <canvas class="layer" id="ink"></canvas>
+    <canvas class="pad" id="hit"></canvas>
+  </div>
+  <div class="badge"><b>Brush Lessons</b>Copy the model, then meet the masters</div>
+  <nav class="toolbar">
+    <a href="../">Versions</a>
+    <button id="lessonsBtn">Lessons</button>
+    <button id="demoBtn">Watch again</button>
+    <button id="sheetBtn">New sheet</button>
+    <button id="doneBtn">Colophon</button>
+  </nav>
+  <div class="lesson" id="lesson" hidden><h2 id="lTitle"></h2><p id="lIntro"></p><div class="chips" id="lChips"></div></div>
+  <div class="notes" id="notes"></div>
+  <div class="picker" id="picker">
+    <h1>Brush Lessons</h1>
+    <p>Painters learned by copying (臨摹 linmo): watch a model stroke, then make it yourself beside it. The ink here behaves like ink: it spreads in the paper, runs dry, and cannot be erased. Each stroke you make opens a window onto a painting in The Met where a master made the same kind of stroke.</p>
+    <div class="grid" id="grid"></div>
+    <div class="treasures" id="treasures"></div>
+  </div>
+  <div class="modal" id="modal"><div id="modalBody"></div></div>
+  <div class="busy" id="busy"></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

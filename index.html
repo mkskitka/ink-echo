@@ -23,6 +23,8 @@
     header img { width: 52px; height: 52px; border-radius: 12px; }
     h1 { font-size: 30px; font-weight: 600; }
     .lede { color: var(--muted); font-size: 16px; line-height: 1.5; margin: 6px 0 22px; max-width: 640px; }
+    h3.sec { font-size: 15px; font-weight: 400; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 26px 0 10px; }
+    a.card.new { background: #fffaf0; border-color: rgba(168,50,42,.25); }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
     a.card {
       display: block; text-decoration: none; color: inherit; background: #fbf8f1;
@@ -42,7 +44,37 @@
 <body>
   <main>
     <header><img src="icon-180.png" alt=""><h1>Ink Echo</h1></header>
-    <p class="lede">Draw with a finger or Apple Pencil, and ink paintings from The Met answer your lines. Five experiments in matching a drawn gesture to the brushstrokes a painter actually made.</p>
+    <p class="lede">Draw with a finger or Apple Pencil, and ink paintings from The Met answer your lines. Experiments in learning an art form through the hand: matching your gesture to the brushstrokes a painter actually made.</p>
+    <h3 class="sec">With real ink</h3>
+    <p class="lede" style="margin-top:-4px">These simulate the brush and the paper: ink soaks into xuan paper and feathers along its fibres, sits crisp on silk, runs dry into flying white, and pools when you pause. Tilt an Apple Pencil for the side of the brush. Each ends with a colophon about the works you met and how they were made.</p>
+    <div class="grid">
+      <a class="card new" href="v6-sumi/">
+        <div class="num">Version 6 · from Handscroll</div><h2>Sumi Scroll</h2>
+        <p>Handscroll with a real brush on real paper. Dip in thick, middle or pale ink. Each gesture lays a sharp passage from a painting where a master's stroke continues yours, and only where it truly does. Finish to unroll the scroll and read its colophon.</p>
+        <p class="how">Best for: continuous, rhythmic painting</p>
+      </a>
+      <a class="card new" href="v7-contemplation/">
+        <div class="num">Version 7 · meditative</div><h2>Contemplation</h2>
+        <p>Grind your ink on an inkstone with a breathing guide, then spend time with one work. It lies faint on the paper at full resolution; trace the painter's brush and their strokes come up sharp, passage by passage, with quiet notes on what the brush is doing.</p>
+        <p class="how">Best for: slowing down with a single masterwork</p>
+      </a>
+      <a class="card new" href="v8-lessons/">
+        <div class="num">Version 8 · learn the brush</div><h2>Brush Lessons</h2>
+        <p>Learn as painters did, by copying. A model stroke is shown in pale ink (ensō, bamboo, orchid, plum, rock); you copy it, get a reading of your pressure, speed, tip and entry, and meet a master's stroke of the same subject in The Met.</p>
+        <p class="how">Best for: learning the mechanics; Apple Pencil</p>
+      </a>
+      <a class="card new" href="v9-hands/">
+        <div class="num">Version 9 · from Collage</div><h2>Many Hands</h2>
+        <p>Each stroke meets a different master. A card for each hand says how their brush moves in that passage; then compare the hands: Kano and literati, paper and silk, dry and wet, against your own.</p>
+        <p class="how">Best for: seeing how styles differ</p>
+      </a>
+      <a class="card new" href="v10-soak/">
+        <div class="num">Version 10 · from Bloom</div><h2>Soak</h2>
+        <p>Where your line meets a painter's ink, their brushwork soaks up through the paper along their strokes, feathering on xuan paper, rising crisp on silk.</p>
+        <p class="how">Best for: watching a painting grow from your mark</p>
+      </a>
+    </div>
+    <h3 class="sec">The first experiments</h3>
     <div class="grid">
       <a class="card" href="v1-lens/">
         <div class="num">Version 1</div><h2>Lens</h2>

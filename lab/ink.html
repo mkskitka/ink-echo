@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ink Echo · ink lab</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #efe6d2; }
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #ink { z-index: 1; } #hit { z-index: 2; }
+  nav { position: fixed; top: 8px; left: 8px; z-index: 3; font: 13px system-ui; }
+</style></head>
+<body>
+<canvas id="paper"></canvas><canvas id="ink"></canvas><canvas id="hit"></canvas>
+<nav><select id="kind"><option>xuan</option><option>sized</option><option>silk</option></select></nav>
+<script type="module">
+// Dev page: try the brush by hand, or let scripts drive window.demo().
+import { InkPaper, paperBackground } from "../shared/inkpaper.js";
+import { Brush } from "../shared/brush.js";
+const kind = new URLSearchParams(location.search).get("paper") || "xuan";
+document.getElementById("kind").value = kind;
+document.getElementById("kind").onchange = (e) => { location.search = "?paper=" + e.target.value; };
+paperBackground(document.getElementById("paper"), { kind });
+const paper = new InkPaper(document.getElementById("ink"), { paper: kind });
+const brush = new Brush(document.getElementById("hit"), paper, { size: 9 });
+window.paperOK = paper.ok;
+const el = document.getElementById("hit");
+const fire = (type, x, y, o = {}) => el.dispatchEvent(new PointerEvent(type, { clientX: x, clientY: y, pointerId: 7, bubbles: true, pointerType: o.type || "pen", pressure: o.p ?? 0.5, tiltX: o.tilt || 0, tiltY: 0 }));
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+// scripted strokes: path(t) -> [x, y, pressure], duration ms
+window.stroke = async (path, ms, o = {}) => {
+  const n = Math.max(12, Math.round(ms / 8));
+  let [x, y, p] = path(0);
+  fire("pointerdown", x, y, { ...o, p });
+  if (o.hold) await wait(o.hold);
+  for (let i = 1; i <= n; i++) {
+    [x, y, p] = path(i / n);
+    fire("pointermove", x, y, { ...o, p });
+    await wait(ms / n);
+  }
+  if (o.holdEnd) await wait(o.holdEnd);
+  fire("pointerup", x, y, { ...o, p });
+};
+window.demo = async () => {
+  // 1 slow, wet, pressed stroke (bleeds)
+  await stroke((t) => [40 + t * 300, 80 + Math.sin(t * 3) * 20, 0.8], 2600, { hold: 500 });
+  // 2 fast stroke: flying white as the brush runs dry
+  brush.opts.water = 0.3;
+  await stroke((t) => [40 + t * 320, 170 + t * 30, 0.6 - t * 0.3], 380);
+  await stroke((t) => [40 + t * 320, 215 + t * 30, 0.5], 300);
+  brush.opts.water = 0.55;
+  // 3 lift-press: nail-head rat-tail (heavy entry, tapering)
+  await stroke((t) => [60 + t * 280, 300 - Math.sin(t * Math.PI) * 40, 0.95 * (1 - t) + 0.05], 1100, { hold: 250 });
+  // 4 side tip (tilted pencil): broad, one-edged
+  await stroke((t) => [60 + t * 260, 380 + t * 40, 0.7], 1300, { tilt: 55 });
+  // 5 pale wash then a dark line through it (ink on wet ink)
+  brush.dip(0.25, 0.9); brush.opts.autoDip = false;
+  await stroke((t) => [70 + t * 250, 470, 0.9], 1600);
+  brush.opts.autoDip = true; brush.opts.tone = 1;
+  await stroke((t) => [180, 430 + t * 90, 0.5], 700);
+  await wait(6000);
+  return true;
+};
+</script>
+</body></html>

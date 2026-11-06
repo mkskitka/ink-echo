@@ -3,7 +3,8 @@
 // query is always a fresh, small gesture (never an idiosyncratic pile-up).
 // Each match lays a passage from a painting along the scroll, at the place you
 // drew it. Velocity-sensitive dry brush.
-import { Engine, imageAffine, loadImage } from "../shared/engine.js";
+import { Engine } from "../shared/engine.js";
+import { renderPassage } from "../shared/view.js";
 import { Pad } from "../shared/pad.js";
 
 const $ = (id) => document.getElementById(id);
@@ -30,6 +31,7 @@ window.addEventListener("resize", size);
 size();
 
 pad.on("start", () => { started = true; $("hint").classList.add("gone"); });
+pad.on("move", () => engine && engine.warm(recent()));
 pad.on("end", () => match());
 
 function recent() {
@@ -46,11 +48,14 @@ async function match() {
   $("busy").classList.add("on");
   try {
     const used = passages.slice(-6).map((p) => p.work);
-    const r = await engine.match(strokes, { k: 14, alignK: 5, exclude: used });
+    const r = await engine.match(strokes.filter((s) => s.t1), { k: 28, alignK: 5, exclude: used });
     if (!r || !r.results.length) return;
+    // only passages where a painted stroke really continues yours
+    const ok = r.results.filter((x) => x.follow >= 0.3);
+    if (!ok.length) return;
     // prefer real handscrolls (wide works) when they're nearly as good
-    const best = r.results[0];
-    const scroll = r.results.find((x) => engine.works[x.work].aspect < 0.55 && x.score > best.score - 0.05);
+    const best = ok[0];
+    const scroll = ok.find((x) => engine.works[x.work].aspect < 0.55 && x.score > best.score - 0.05);
     const pick = scroll || best;
     await lay(pick, r.frame, strokes);
   } catch (err) { console.error(err); }
@@ -60,39 +65,11 @@ async function match() {
   }
 }
 
-/** Render a passage once into its own canvas (world coords), masked to a soft
- *  band around the gesture that called it up. */
+/** Render a passage once into its own canvas (world coords): hi-res, snapped
+ *  to your line, seen through a soft band around the gesture. */
 async function lay(res, frame, strokes) {
-  const w = engine.works[res.work];
-  const img = await loadImage(w.image);
-  const ink = engine.ink.get(res.work);
-  const dpr = layer.width / layer.clientWidth;
-  const band = Math.max(70, frame.S * 0.45);
-  const x = frame.cx - frame.S / 2 - band, y = frame.cy - frame.S / 2 - band;
-  const wd = Math.min(2400, frame.S + band * 2), ht = Math.min(2400, frame.S + band * 2);
-  const c = document.createElement("canvas");
-  c.width = wd * dpr; c.height = ht * dpr;
-  const g = c.getContext("2d");
-  const [a, b, cc, d, e, f] = imageAffine(res.pose, frame, ink.W, img.naturalWidth);
-  g.setTransform(a * dpr, b * dpr, cc * dpr, d * dpr, (e - x) * dpr, (f - y) * dpr);
-  g.drawImage(img, 0, 0);
-  // soft band around the gesture
-  const m = document.createElement("canvas");
-  m.width = c.width; m.height = c.height;
-  const mg = m.getContext("2d");
-  mg.setTransform(dpr, 0, 0, dpr, -x * dpr, -y * dpr);
-  mg.lineCap = mg.lineJoin = "round"; mg.strokeStyle = "#000";
-  mg.shadowColor = "#000"; mg.shadowBlur = 40 * dpr;
-  mg.lineWidth = band * 1.4;
-  for (const s of strokes) {
-    mg.beginPath();
-    s.points.forEach((p, i) => (i ? mg.lineTo(p.x, p.y) : mg.moveTo(p.x, p.y)));
-    mg.stroke();
-  }
-  g.setTransform(1, 0, 0, 1, 0, 0);
-  g.globalCompositeOperation = "destination-in";
-  g.drawImage(m, 0, 0);
-  passages.push({ canvas: c, x, y, w: wd, h: ht, work: res.work, born: performance.now() });
+  const p = await renderPassage(engine, res, frame, strokes, { band: Math.max(70, frame.S * 0.45) });
+  passages.push({ ...p, work: res.work, born: performance.now() });
   trail();
 }
 

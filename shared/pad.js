@@ -55,7 +55,7 @@ export class Pad {
     if (this.pointer !== null || this.disabled) return;
     e.preventDefault();
     this.pointer = e.pointerId;
-    this.canvas.setPointerCapture(e.pointerId);
+    try { this.canvas.setPointerCapture(e.pointerId); } catch { /* synthetic events */ }
     this.active = { points: [this._pt(e)], t0: performance.now() };
     this.strokes.push(this.active);
     this._emit("start", this.active);

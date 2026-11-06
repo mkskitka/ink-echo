@@ -1,7 +1,8 @@
 // V3 · Collage — every stroke is its own query. Each one opens a soft window
 // onto a *different* painting, posed so the painter's stroke sits under yours.
 // Idiosyncratic combinations are fine: no single painting has to contain them.
-import { Engine, imageAffine, loadImage } from "../shared/engine.js";
+import { Engine } from "../shared/engine.js";
+import { renderPassage } from "../shared/view.js";
 import { Pad } from "../shared/pad.js";
 
 const $ = (id) => document.getElementById(id);
@@ -27,6 +28,7 @@ function size() {
 window.addEventListener("resize", size);
 
 pad.on("start", () => $("hint").classList.add("gone"));
+pad.on("move", (s) => engine && engine.warm([s]));
 pad.on("end", (s) => {
   if (isTap(s)) { pad.undo(); return tap(s.points[0]); }
   queue = queue.then(() => addFragment(s)); // keep strokes in order
@@ -43,13 +45,11 @@ async function addFragment(stroke) {
   $("busy").classList.add("on");
   try {
     const used = fragments.slice(-8).map((f) => f.work);
-    const r = await engine.match([stroke], { k: 12, alignK: 3, exclude: used });
+    const r = await engine.match([stroke], { k: 28, alignK: 3, exclude: used });
     if (!r || !r.results.length || !pad.strokes.includes(stroke)) return;
-    const best = r.results[0];
-    const w = engine.works[best.work];
-    const img = await loadImage(w.image);
-    fragments.push({ stroke, work: best.work, pose: best.pose, frame: r.frame, img,
-      ink: engine.ink.get(best.work), born: performance.now(),
+    const best = r.results.find((x) => x.follow >= 0.25) || r.results[0];
+    const p = await renderPassage(engine, best, r.frame, [stroke], { band: Math.max(44, r.frame.S * 0.4) });
+    fragments.push({ stroke, work: best.work, pose: best.pose, frame: r.frame, passage: p, born: performance.now(),
       color: COLORS[fragments.length % COLORS.length] });
     sources();
     animate();
@@ -67,44 +67,19 @@ function animate() {
   step();
 }
 
-const tmp = document.createElement("canvas");
-const mask = document.createElement("canvas");
 function draw() {
   const g = collage.getContext("2d");
   const dpr = collage.width / collage.clientWidth;
   g.setTransform(1, 0, 0, 1, 0, 0);
   g.clearRect(0, 0, collage.width, collage.height);
-  if (tmp.width !== collage.width || tmp.height !== collage.height) {
-    tmp.width = mask.width = collage.width; tmp.height = mask.height = collage.height;
-  }
-  const t = tmp.getContext("2d"), m = mask.getContext("2d");
   for (const f of fragments) {
     const grow = Math.min(1, (performance.now() - f.born) / 900);
     const ease = 1 - Math.pow(1 - grow, 3);
-    // the painting, posed
-    t.setTransform(1, 0, 0, 1, 0, 0);
-    t.clearRect(0, 0, tmp.width, tmp.height);
-    t.setTransform(...imageAffine(f.pose, f.frame, f.ink.W, f.img.naturalWidth).map((v) => v * dpr));
-    t.drawImage(f.img, 0, 0);
-    // a soft window that grows out from the stroke
-    m.setTransform(1, 0, 0, 1, 0, 0);
-    m.clearRect(0, 0, mask.width, mask.height);
-    m.setTransform(dpr, 0, 0, dpr, 0, 0);
-    m.lineCap = m.lineJoin = "round";
-    m.strokeStyle = "#000";
-    m.shadowColor = "#000"; m.shadowBlur = 30 * dpr;
-    m.lineWidth = Math.max(44, f.frame.S * 0.4) * ease;
-    m.beginPath();
-    f.stroke.points.forEach((p, i) => (i ? m.lineTo(p.x, p.y) : m.moveTo(p.x, p.y)));
-    m.stroke();
-    t.setTransform(1, 0, 0, 1, 0, 0);
-    t.globalCompositeOperation = "destination-in";
-    t.drawImage(mask, 0, 0);
-    t.globalCompositeOperation = "source-over";
-    g.globalAlpha = focusFrag && focusFrag !== f ? 0.35 : 1;
-    g.drawImage(tmp, 0, 0);
-    g.globalAlpha = 1;
+    const p = f.passage;
+    g.globalAlpha = ease * (focusFrag && focusFrag !== f ? 0.35 : 1);
+    g.drawImage(p.canvas, p.x * dpr, p.y * dpr, p.w * dpr, p.h * dpr);
   }
+  g.globalAlpha = 1;
 }
 
 function sources() {

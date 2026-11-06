@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Ink Echo · alignment lab</title></head>
+<body>
+<p id="s">loading…</p>
+<script type="module">
+// Dev harness: scripts/eval_alignment.py drives this page with Playwright.
+import { Engine } from "../shared/engine.js";
+const engine = await Engine.create("../");
+window.runQuery = async (strokes, opts) => {
+  const t = performance.now();
+  strokes = strokes.map((p) => ({ points: p, t0: 0, t1: 1 }));
+  const r = await engine.match(strokes, opts);
+  if (!r || !r.results.length) return null;
+  const b = r.results[0];
+  return { ms: performance.now() - t, frame: r.frame, work: b.work, id: engine.works[b.work].id,
+    W: b.W, H: b.H, pose: b.pose, score: b.score, cost: b.cost, warp: b.warp || null, follow: b.follow };
+};
+window.ready = true;
+document.getElementById("s").textContent = "ready";
+</script>
+</body></html>
