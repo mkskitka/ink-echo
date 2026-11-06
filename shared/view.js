@@ -135,7 +135,31 @@ export function setCaption(el, work, extra = "") {
  * you see first is the part that matches.
  * Returns {canvas, x, y, w, h} (CSS px, in the strokes' coordinate space).
  */
-export async function renderPassage(engine, res, frame, strokes, { band, dpr = Math.min(window.devicePixelRatio || 1, 2), max = 2400, offset = { x: 0, y: 0 } } = {}) {
+/** The colour of a painting's paper or silk (bright end of its picture area),
+ *  so passages can show the painter's ink alone. null if the image is cross-origin. */
+const paperCache = new Map();
+export function paperColor(work, img) {
+  const key = work.id;
+  if (paperCache.has(key)) return paperCache.get(key);
+  let out = null;
+  try {
+    const b = work.box || [0, 0, 1, 1];
+    const c = document.createElement("canvas"); c.width = c.height = 48;
+    const g = c.getContext("2d", { willReadFrequently: true });
+    const W = img.naturalWidth, H = img.naturalHeight;
+    g.drawImage(img, b[0] * W, b[1] * H, (b[2] - b[0]) * W, (b[3] - b[1]) * H, 0, 0, 48, 48);
+    const d = g.getImageData(0, 0, 48, 48).data;
+    const px = [];
+    for (let i = 0; i < d.length; i += 4) px.push([d[i] + d[i + 1] + d[i + 2], d[i], d[i + 1], d[i + 2]]);
+    px.sort((a, b2) => b2[0] - a[0]);
+    const top = px.slice(Math.floor(px.length * 0.08), Math.floor(px.length * 0.35));   // bright, but not highlights
+    out = [1, 2, 3].map((k) => top.reduce((s, p) => s + p[k], 0) / top.length);
+  } catch { out = null; }
+  paperCache.set(key, out);
+  return out;
+}
+
+export async function renderPassage(engine, res, frame, strokes, { band, dpr = Math.min(window.devicePixelRatio || 1, 2), max = 2400, offset = { x: 0, y: 0 }, inkOnly = false } = {}) {
   const img = await engine.loadPainting(res.work);
   const ink = await engine.ensureInk(res.work);
   band = band ?? Math.max(60, frame.S * 0.42);
@@ -147,6 +171,25 @@ export async function renderPassage(engine, res, frame, strokes, { band, dpr = M
   g.imageSmoothingQuality = "high";
   const M = imageAffine(res.pose, frame, ink.W, img.naturalWidth);
   drawWarped(g, img, M, warpField(res.warp, frame), [dpr, -x * dpr, -y * dpr]);
+  if (inkOnly) {
+    // divide out the paper colour (colour-dodge by its complement): paper -> white,
+    // so with multiply blending only the painter's ink lands on your sheet
+    const P = paperColor(engine.works[res.work], img);
+    if (P) {
+      g.save();
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.globalCompositeOperation = "color-dodge";
+      g.fillStyle = `rgb(${P.map((v) => Math.max(0, 255 - Math.min(255, v * 1.02))).join(",")})`;
+      g.fillRect(0, 0, c.width, c.height);
+      // dividing amplifies faint colour casts in old paper: pull most colour out
+      // (seals keep a little of their red)
+      g.globalCompositeOperation = "saturation";
+      g.globalAlpha = 0.75;
+      g.fillStyle = "#808080";
+      g.fillRect(0, 0, c.width, c.height);
+      g.restore();
+    }
+  }
   // window: strokes as a blurred mask, thicker where they hit painted lines
   const m = document.createElement("canvas");
   m.width = c.width; m.height = c.height;

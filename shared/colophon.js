@@ -2,7 +2,7 @@
 // at the end of a scroll: what they saw, who made it, how. This one gathers the
 // works you met, shows each at the passage your line found, says how it was
 // made and what its brushwork does, and sets your strokes beside theirs.
-import { imageAffine } from "./engine.js";
+import { imageAffine, screenToInk } from "./engine.js";
 import { TECHNIQUES, PRINCIPLES, describeWork, measurePassage, brushWords, readStroke } from "./lore.js";
 
 const CSS = `
@@ -28,6 +28,8 @@ const CSS = `
 .colophon .close { position: sticky; top: 0; float: right; z-index: 2; font: 15px system-ui, sans-serif;
   background: #2a241c; color: #f1e9d6; border: 0; border-radius: 999px; padding: 8px 16px; }
 .colophon .strokes { width: 100%; height: 120px; aspect-ratio: auto; background: transparent; box-shadow: none; }
+.colophon .ribbon { width: 100%; height: 64px; aspect-ratio: auto; background: transparent; box-shadow: none; margin-top: 6px; }
+.colophon .rlabel { font: 12px system-ui, sans-serif; color: #6d6150; }
 .colophon blockquote { margin: 14px 0; font-style: italic; color: #4d4335; }
 `;
 
@@ -92,6 +94,12 @@ export async function openColophon(engine, encounters, strokes, opts = {}) {
     const how = [d.formatText, d.schoolText, d.materialText, !d.schoolText ? d.periodText : ""].filter(Boolean).join(" ");
     if (how) body.append(el("p", null, esc(how)));
     if (m && yours.m) body.append(el("div", "vs", compare(yours.m, m)));
+    const prof = ink ? widthProfile(ink, e) : null;
+    if (prof) {
+      const rc = el("canvas", "ribbon"); body.append(rc);
+      body.append(el("div", "rlabel", "Width along the stroke: theirs in ink, yours outlined in red."));
+      requestAnimationFrame(() => drawRibbon(rc, prof));
+    }
     body.append(el("p", "meta", `<a href="${esc(w.url)}" target="_blank" rel="noopener">See it at metmuseum.org ↗</a>`));
     card.append(body);
     inner.append(card);
@@ -138,6 +146,74 @@ async function drawPassage(engine, cv, e) {
   g.strokeStyle = "rgba(168,50,42,0.75)"; g.lineWidth = 2 * dpr / k; g.lineCap = g.lineJoin = "round";
   for (const s of e.strokes) {
     g.beginPath(); s.points.forEach((p, i) => (i ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y))); g.stroke();
+  }
+}
+
+/** Along your (first) stroke in an encounter: your width, and the width of the
+ *  painted stroke under it (measured across the painted line in its ink map). */
+function widthProfile(ink, e) {
+  const s = e.strokes && e.strokes.find((x) => x.points && x.points.length > 8);
+  if (!s) return null;
+  const { pose, frame } = e;
+  const scale = frame.S / pose.s;                 // screen px per ink px
+  const T = 90, P = s.points, N = 48;
+  const theirs = [], yours = [];
+  let hits = 0;
+  for (let k = 0; k < N; k++) {
+    const i = Math.min(P.length - 2, Math.floor((k / (N - 1)) * (P.length - 2)));
+    const a = P[i], b = P[i + 1];
+    const [qx, qy] = screenToInk(pose, frame, a.x, a.y);
+    const [rx, ry] = screenToInk(pose, frame, b.x, b.y);
+    let tx = rx - qx, ty = ry - qy; const tl = Math.hypot(tx, ty) || 1; tx /= tl; ty /= tl;
+    const nx = -ty, ny = tx;
+    const at = (x, y) => { const X = Math.round(x), Y = Math.round(y); return X >= 0 && Y >= 0 && X < ink.W && Y < ink.H ? ink.data[Y * ink.W + X] : 0; };
+    // find the painted line across your stroke (within a few px), then measure its width
+    let best = null;
+    for (let o = -4; o <= 4; o += 0.5) if (at(qx + nx * o, qy + ny * o) > T && (best === null || Math.abs(o) < Math.abs(best))) best = o;
+    yours.push(a.w || 3);
+    if (best === null) { theirs.push(0); continue; }
+    hits++;
+    const cx = qx + nx * best, cy = qy + ny * best;
+    let l = 0, r = 0;
+    while (l < 40 && at(cx - nx * (l + 0.5), cy - ny * (l + 0.5)) > T) l += 0.5;
+    while (r < 40 && at(cx + nx * (r + 0.5), cy + ny * (r + 0.5)) > T) r += 0.5;
+    const wpx = (l + r + 1) * scale;
+    theirs.push(wpx > Math.max(24, (a.w || 3) * 8) ? 0 : wpx);   // a wash or a gap, not a stroke
+  }
+  return hits >= N * 0.3 ? { theirs, yours } : null;
+}
+
+function drawRibbon(cv, { theirs, yours }) {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const W = cv.clientWidth || 260, H = cv.clientHeight || 64;
+  cv.width = W * dpr; cv.height = H * dpr;
+  const g = cv.getContext("2d");
+  g.scale(dpr, dpr);
+  const max = Math.max(4, ...theirs, ...yours);
+  const k = (H - 8) / max, N = theirs.length, y0 = H / 2;
+  const X = (i) => 6 + (i / (N - 1)) * (W - 12);
+  const smooth = (a) => a.map((v, i) => (a[Math.max(0, i - 1)] + v * 2 + a[Math.min(a.length - 1, i + 1)]) / 4);
+  const t = smooth(theirs).map((v, i) => (theirs[i] ? v : 0)), y = smooth(yours);
+  g.fillStyle = "rgba(27,25,21,.85)";
+  // painted stroke as filled ribbons, one shape per unbroken run (gaps where it
+  // broke into flying white or left your line)
+  let i = 0;
+  while (i < N) {
+    while (i < N && !t[i]) i++;
+    const a = i;
+    while (i < N && t[i]) i++;
+    const b = i - 1;
+    if (b <= a) continue;
+    g.beginPath();
+    for (let j = a; j <= b; j++) g.lineTo(X(j), y0 - (t[j] * k) / 2);
+    for (let j = b; j >= a; j--) g.lineTo(X(j), y0 + (t[j] * k) / 2);
+    g.closePath(); g.fill();
+  }
+  g.strokeStyle = "rgba(168,50,42,.95)"; g.lineWidth = 1.3;
+  for (const sgn of [-1, 1]) {
+    g.beginPath();
+    y.forEach((v, i) => (i ? g.lineTo(X(i), y0 + (sgn * v * k) / 2) : g.moveTo(X(i), y0 + (sgn * v * k) / 2)));
+    g.stroke();
   }
 }
 

@@ -102,6 +102,18 @@ export const TECHNIQUES = {
   },
 };
 
+/** The eight principles of 永 (永字八法), in the order they appear. */
+export const YONG = [
+  { term: "側 ce", name: "Dot", text: "Like a stone falling from a high peak: press in at an angle, turn, lift." },
+  { term: "勒 le", name: "Horizontal", text: "Like reining in a horse: the brush pulls against itself, rising slightly." },
+  { term: "努 nu", name: "Vertical", text: "Like drawing a bow: straight, with tension, not stiffness." },
+  { term: "趯 ti", name: "Hook", text: "Gather force at the bottom, then kick out quickly." },
+  { term: "策 ce", name: "Rising", text: "Like a whip: a quick upward flick." },
+  { term: "掠 lüe", name: "Long left-falling", text: "Sweep down to the left, the line thinning as the brush lifts." },
+  { term: "啄 zhuo", name: "Short left-falling", text: "Like a bird pecking: short, fast, sharp." },
+  { term: "磔 zhe", name: "Right-falling", text: "Begin light, press down into a broad belly, pause, then release to the right." },
+];
+
 export const PRINCIPLES = [
   { term: "氣韻生動", name: "Spirit resonance, life-motion",
     text: "The first of Xie He's six principles of painting (about 500 CE): the work should carry the living energy of what it shows and of the hand that made it." },
@@ -124,6 +136,12 @@ export const TREASURES = {
 // The Mustard Seed Garden Manual of Painting (芥子園畫傳, first part 1679)
 // taught painting stroke by stroke through set subjects. These follow that idea.
 export const LESSONS = [
+  {
+    id: "yong", title: "Eight principles", subject: "永 (eternity)", tags: ["Calligraphy"], classification: "Calligraphy",
+    techniques: ["concealed", "liftpress", "pause", "centred"],
+    intro: "The character 永, \"eternity\", holds all eight basic movements of the brush: dot, horizontal, vertical, hook, rising, long and short left-falling, and the wave-like right-falling. Calligraphers have practised them for over a thousand years. Copy it stroke by stroke, in order.",
+    demo: { kind: "yong" }, goal: {},
+  },
   {
     id: "enso", title: "One breath", subject: "Ensō", tags: [], techniques: ["enso", "arm"],
     intro: "Before any subject, one circle. Breathe in. As you breathe out, draw the circle in one movement and do not go back.",
@@ -188,6 +206,9 @@ const FORMAT = [
   [/album|leaf|shikishi|shikisi/i, "Album leaf", "An album leaf was made to be held in the hands and seen closely, turned page by page in a small gathering."],
   [/fan/i, "Fan", "Painted on a folding fan, or on fan-shaped paper, then often mounted flat in an album; a gift carried and opened in company."],
   [/screen/i, "Folding screen", "A folding screen (屏風 byōbu) stood on the floor and was seen from a few steps away, its panels set in zigzags, so the composition moves in and out of the folds."],
+  [/ten bamboo/i, "Painting manual", "A page of the Ten Bamboo Studio Manual of Calligraphy and Painting (十竹齋書畫譜, 1633), printed in Nanjing in many colour blocks, one per tone, so that a print could imitate the gradations of a brushstroke. It taught flowers, bamboo, rocks and fruit by example."],
+  [/mustard seed/i, "Painting manual", "A page of the Mustard Seed Garden Manual of Painting (芥子園畫傳, first published 1679): a woodblock-printed course that taught painting stroke by stroke, subject by subject. Generations of painters in China and Japan learned from it, copying its models before ever painting from nature."],
+  [/manga|sketchbook|gafu|manual/i, "Printed sketchbook", "A woodblock-printed book of brush drawings, cut by a carver from the artist's own drawings and printed for students and amateurs to copy."],
   [/sketch|drawing|study/i, "Sketch", "A working drawing: the painter's hand seen thinking."],
 ];
 

@@ -9,7 +9,8 @@ import { Brush } from "../shared/brush.js";
 import { renderPassage } from "../shared/view.js";
 import { openColophon, passageBox } from "../shared/colophon.js";
 import { measurePassage, brushWords, describeWork } from "../shared/lore.js";
-import { inkwells, toast } from "../shared/ui.js";
+import { inkwells, toast, soundToggle } from "../shared/ui.js";
+import { BrushSound } from "../shared/brushsound.js";
 
 const $ = (id) => document.getElementById(id);
 const COLORS = ["#a8322a", "#b0892f", "#3f6b5c", "#5b4a7a", "#2f5d8a", "#8a5a2f"];
@@ -17,6 +18,7 @@ paperBackground($("paper"), { kind: "xuan" });
 const paper = new InkPaper($("ink"), { paper: "xuan" });
 const brush = new Brush($("hit"), paper, { size: 7 });
 inkwells(brush);
+soundToggle(new BrushSound(brush));
 const win = $("windows");
 let engine = null, windows = [], queue = Promise.resolve();
 const encounters = [];
@@ -40,7 +42,7 @@ async function meet(stroke) {
     if (!r || !r.results.length) return;
     const best = r.results[0];
     if (best.follow < 0.25) { toast("No master's stroke runs quite like that one. It stays yours."); return; }
-    const p = await renderPassage(engine, best, r.frame, [stroke], { band: Math.max(56, r.frame.S * 0.4) });
+    const p = await renderPassage(engine, best, r.frame, [stroke], { band: Math.max(56, r.frame.S * 0.4), inkOnly: true });
     const color = COLORS[windows.length % COLORS.length];
     windows.push({ ...p, work: best.work, born: performance.now(), color });
     encounters.push({ work: best.work, pose: best.pose, frame: r.frame, strokes: [stroke], warp: best.warp });

@@ -10,13 +10,16 @@ import { Brush } from "../shared/brush.js";
 import { renderPassage } from "../shared/view.js";
 import { openColophon } from "../shared/colophon.js";
 import { LESSONS, TECHNIQUES, TREASURES, readStroke } from "../shared/lore.js";
-import { inkwells, toast } from "../shared/ui.js";
+import { inkwells, toast, soundToggle } from "../shared/ui.js";
+import { BrushSound } from "../shared/brushsound.js";
+import { YONG } from "../shared/lore.js";
 
 const $ = (id) => document.getElementById(id);
 paperBackground($("paper"), { kind: "xuan" });
 const paper = new InkPaper($("ink"), { paper: "xuan" });
 const brush = new Brush($("hit"), paper, { size: 8 });
 inkwells(brush);
+soundToggle(new BrushSound(brush));
 const win = $("windows");
 let engine = null, lesson = null, playing = false;
 let windows = [];            // {canvas, x, y, w, h, born}
@@ -46,6 +49,7 @@ function start(l) {
     return b;
   }));
   sheet();
+  if (l.id === "yong") note({ html: YONG.map((y) => `<b>${y.term}</b> ${y.name}: ${y.text}`).join("<br>"), kind: "src" }, 26000);
   setTimeout(demo, 700);
 }
 
@@ -63,6 +67,27 @@ function modelStrokes(kind) {
   const cx = W * 0.3, cy = H * 0.55, S = Math.min(W * 0.42, H * 0.36);
   const n = 70, T = (f) => Array.from({ length: n + 1 }, (_, i) => f(i / n));
   switch (kind) {
+    case "yong": {
+      // 永 in a box on the left half: [x, y] in 0..1, with a pressure profile per stroke
+      const B = Math.min(W * 0.44, H * 0.42), ox = cx - B / 2, oy = cy - B / 2;
+      const seg = (pts, press, n2 = 26) => {
+        const out = [];
+        for (let k = 1; k < pts.length; k++) for (let i = 0; i <= n2; i++) {
+          const t = i / n2, a = pts[k - 1], b = pts[k];
+          const g = (k - 1 + t) / (pts.length - 1);
+          out.push([ox + (a[0] + (b[0] - a[0]) * t) * B, oy + (a[1] + (b[1] - a[1]) * t) * B, press(g)]);
+        }
+        return out;
+      };
+      return [
+        { ms: 380, holdStart: 200, holdEnd: 150, pts: seg([[0.47, 0.06], [0.56, 0.15]], (g) => 0.45 + 0.5 * g) },                       // 側 dot
+        { ms: 1500, holdStart: 200, pts: seg([[0.33, 0.30], [0.57, 0.28], [0.57, 0.86], [0.49, 0.80]],                                  // 勒 努 趯
+          (g) => (g < 0.05 ? 0.85 : g < 0.33 ? 0.5 : g < 0.38 ? 0.85 : g < 0.9 ? 0.6 : 0.6 - (g - 0.9) * 5)), holdEnd: 0 },
+        { ms: 900, holdStart: 150, pts: seg([[0.20, 0.50], [0.40, 0.46], [0.17, 0.76]], (g) => (g < 0.5 ? 0.5 : 0.7 - (g - 0.5) * 1.2)) }, // 策 掠
+        { ms: 380, holdStart: 120, pts: seg([[0.82, 0.38], [0.62, 0.57]], (g) => 0.75 - 0.65 * g) },                                    // 啄
+        { ms: 1200, pts: seg([[0.60, 0.50], [0.76, 0.70], [0.92, 0.88]], (g) => (g < 0.75 ? 0.25 + g * 0.95 : 0.95 - (g - 0.75) * 3.4)), holdEnd: 0 }, // 磔
+      ];
+    }
     case "circle": return [{ ms: 2600, pts: T((t) => { const a = -2.2 + t * Math.PI * 1.93; const r = S * 0.45 * (1 + 0.04 * Math.sin(t * 9));
       return [cx + r * Math.cos(a), cy + r * Math.sin(a), 0.85 - 0.55 * t]; }), holdStart: 350 }];
     case "stalk": return [0, 1, 2, 3].map((k) => ({ ms: 650, holdStart: 260, holdEnd: 180, pts: T((t) => {
@@ -122,18 +147,24 @@ async function meetMaster(stroke) {
   $("busy").classList.add("on");
   try {
     const tags = new Set(lesson.tags);
-    const only = tags.size ? engine.works.map((w, i) => ((w.tags || []).some((t) => tags.has(t)) ? i : -1)).filter((i) => i >= 0) : null;
+    const cls = lesson.classification;
+    // the subject's paintings, plus the painting manuals themselves (Mustard Seed Garden, Hokusai's sketchbooks)
+    const isManual = (w) => w.classification === "Illustrated Books" || /mustard seed|ten bamboo|manual|sketchbook/i.test(w.title);
+    const only = tags.size || cls ? engine.works.map((w, i) => (((w.tags || []).some((t) => tags.has(t)) || (cls && w.classification === cls) || isManual(w)) ? i : -1)).filter((i) => i >= 0) : null;
     const used = windows.map((w) => w.work);
     const r = await engine.match([stroke], { k: 24, alignK: 4, exclude: used, only });
     if (!r || !r.results.length) return;
     const best = r.results[0];
     if (best.follow < 0.25) { note({ text: "No master's stroke quite like that one in the collection. Try again, closer to the model.", kind: "try" }); return; }
-    const p = await renderPassage(engine, best, r.frame, [stroke], { band: Math.max(50, r.frame.S * 0.35) });
+    const p = await renderPassage(engine, best, r.frame, [stroke], { band: Math.max(50, r.frame.S * 0.35), inkOnly: true });
     windows.push({ ...p, work: best.work, born: performance.now() });
     encounters.push({ work: best.work, pose: best.pose, frame: r.frame, strokes: [stroke], warp: best.warp });
     animate();
     const w = engine.works[best.work];
-    note({ html: `A stroke like yours: <a href="${w.url}" target="_blank" rel="noopener">${w.title}</a>${w.artist ? " · " + w.artist : ""}`, kind: "src" }, 9000);
+    const manual = /mustard seed/i.test(w.title) ? "A page from the Mustard Seed Garden Manual itself, teaching a stroke like yours: " :
+      /ten bamboo/i.test(w.title) ? "A page from the Ten Bamboo Studio Manual (1633), teaching a stroke like yours: " :
+      /sketchbook|manga/i.test(w.title) ? "From Hokusai's sketchbooks, made to teach drawing: " : "A stroke like yours: ";
+    note({ html: `${manual}<a href="${w.url}" target="_blank" rel="noopener">${w.title}</a>${w.artist ? " · " + w.artist : ""}`, kind: "src" }, 9000);
   } catch (err) { console.error(err); }
   finally { $("busy").classList.remove("on"); }
 }

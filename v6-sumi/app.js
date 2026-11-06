@@ -8,7 +8,8 @@ import { InkPaper, paperBackground } from "../shared/inkpaper.js";
 import { Brush } from "../shared/brush.js";
 import { renderPassage } from "../shared/view.js";
 import { openColophon } from "../shared/colophon.js";
-import { inkwells, toast } from "../shared/ui.js";
+import { inkwells, toast, soundToggle } from "../shared/ui.js";
+import { BrushSound } from "../shared/brushsound.js";
 
 const $ = (id) => document.getElementById(id);
 const DRIFT = 20;          // px / s the scroll unrolls
@@ -21,11 +22,13 @@ const paper = new InkPaper($("ink"), { paper: paperKind });
 if (!paper.ok) $("status").textContent = "This browser has no WebGL2, so the ink can't be simulated.";
 const brush = new Brush($("hit"), paper, { size: 7.5 });
 inkwells(brush);
+soundToggle(new BrushSound(brush));
 const layer = $("scroll");
 
 let engine = null;
 let passages = [];        // {canvas, x, y, w, h, work, born}
 const encounters = [];    // for the colophon
+let inkOnly = true;        // show the master's ink alone on your paper (vs. with their paper/silk)
 let flowing = true, started = false, last = performance.now(), busy = false, again = false, shiftAcc = 0;
 
 Engine.create("../").then((e) => {
@@ -66,7 +69,7 @@ async function match() {
     const best = ok[0];
     const scroll = ok.find((x) => engine.works[x.work].aspect < 0.55 && x.score > best.score - 0.04);
     const pick = scroll || best;
-    const p = await renderPassage(engine, pick, r.frame, strokes);
+    const p = await renderPassage(engine, pick, r.frame, strokes, { inkOnly });
     passages.push({ ...p, work: pick.work, born: performance.now() });
     encounters.push({ work: pick.work, pose: pick.pose, frame: r.frame, strokes, warp: pick.warp });
     trail();
@@ -163,4 +166,10 @@ $("paperBtn").onclick = (e) => {
   paperBackground($("paper"), { kind: paperKind });
   e.currentTarget.textContent = { xuan: "Xuan paper", sized: "Sized paper", silk: "Silk" }[paperKind];
   toast(InkPaper.papers()[paperKind].label);
+};
+
+$("inkOnlyBtn").onclick = (e) => {
+  inkOnly = !inkOnly;
+  e.currentTarget.textContent = inkOnly ? "Ink only" : "With silk";
+  toast(inkOnly ? "Passages show the master's ink alone, on your paper." : "Passages show their paper or silk too.");
 };
