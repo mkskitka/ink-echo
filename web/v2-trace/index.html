@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#f3eee3">
+  <link rel="icon" type="image/png" href="../icon-180.png">
+  <link rel="apple-touch-icon" href="../icon-180.png">
+  <title>Ink Echo · Trace</title>
+  <link rel="stylesheet" href="../shared/base.css">
+  <style>
+    #hintLayer { animation: breathe 3.2s ease-in-out infinite; }
+    @keyframes breathe { 50% { opacity: 0.45; } }
+    .meter {
+      position: fixed; left: 50%; transform: translateX(-50%);
+      top: calc(env(safe-area-inset-top) + 66px); z-index: 4;
+      display: flex; gap: 6px; align-items: center; font-size: 13px; color: var(--muted);
+      pointer-events: none;
+    }
+    .dot { width: 12px; height: 12px; border-radius: 3px; background: var(--chip); }
+    .dot.hit { background: var(--seal); }
+    .dot.miss { background: transparent; border: 1px solid var(--muted); }
+    .toast {
+      position: fixed; left: 50%; top: 42%; transform: translate(-50%, -50%); z-index: 6;
+      background: var(--chip-strong); padding: 10px 16px; border-radius: 10px; font-size: 16px;
+      opacity: 0; transition: opacity 0.4s; pointer-events: none; text-align: center;
+    }
+    .toast.on { opacity: 1; }
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <canvas class="layer" id="peekLayer"></canvas>
+    <canvas class="layer" id="hintLayer"></canvas>
+    <canvas class="layer" id="revealLayer"></canvas>
+    <canvas class="pad" id="pad"></canvas>
+  </div>
+  <div class="badge"><b>Trace</b>Learn the master's hand</div>
+  <nav class="toolbar">
+    <a href="../">Versions</a>
+    <button id="undo">Undo</button>
+    <button id="clear">Clear</button>
+    <button id="peek" aria-pressed="false">Peek</button>
+    <button id="hints" aria-pressed="true">Hints</button>
+  </nav>
+  <div class="meter" id="meter"></div>
+  <div class="hint" id="hint">
+    <p class="title">Trace</p>
+    <p>Your first line finds a painting. Then the painter's real strokes near your line glow faintly.</p>
+    <p>Follow them. Every stroke that lands on the master's line reveals the painting.</p>
+    <p class="sub" id="status">Loading…</p>
+  </div>
+  <div class="toast" id="toast"></div>
+  <div class="caption" id="caption" hidden></div>
+  <div class="busy" id="busy"></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

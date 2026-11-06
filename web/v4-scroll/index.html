@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#efe6d2">
+  <link rel="icon" type="image/png" href="../icon-180.png">
+  <link rel="apple-touch-icon" href="../icon-180.png">
+  <title>Ink Echo · Handscroll</title>
+  <link rel="stylesheet" href="../shared/base.css">
+  <style>
+    html, body { background: #efe6d2; }
+    .stage::before, .stage::after { /* scroll rollers */
+      content: ""; position: absolute; top: 0; bottom: 0; width: 14px; z-index: 3; pointer-events: none;
+      background: linear-gradient(90deg, #6b4b2a, #a07a4c 45%, #5a3d22);
+    }
+    .stage::before { left: 0; } .stage::after { right: 0; }
+    #scroll { mix-blend-mode: multiply; }
+    .trail {
+      position: fixed; left: 24px; right: 24px; bottom: calc(env(safe-area-inset-bottom) + 10px); z-index: 4;
+      height: 34px; display: flex; align-items: center; gap: 8px; overflow: hidden; pointer-events: none;
+      font-size: 12px; color: var(--muted); white-space: nowrap;
+    }
+    .trail span { background: var(--chip-strong); padding: 4px 9px; border-radius: 999px; }
+    #unroll { position: fixed; inset: 0; z-index: 8; background: rgba(239,230,210,0.97); display: none;
+      align-items: center; justify-content: center; }
+    #unroll.on { display: flex; }
+    #unroll canvas { max-width: 96vw; box-shadow: 0 2px 16px rgba(0,0,0,.2); }
+    #unroll p { position: absolute; top: calc(env(safe-area-inset-top) + 16px); font-size: 14px; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <canvas class="layer" id="scroll"></canvas>
+    <canvas class="pad" id="pad"></canvas>
+  </div>
+  <div class="badge"><b>Handscroll</b>Ink that flows on</div>
+  <nav class="toolbar">
+    <a href="../">Versions</a>
+    <button id="flow" aria-pressed="true">Flowing</button>
+    <button id="unrollBtn">Unroll</button>
+    <button id="clear">New scroll</button>
+  </nav>
+  <div class="hint" id="hint">
+    <p class="title">Handscroll</p>
+    <p>Draw while the scroll unrolls. Your ink soaks in and fades, and only your last few seconds of gesture are matched, so it never gets stuck.</p>
+    <p>Each gesture calls up a passage from a painting, laid along the scroll.</p>
+    <p class="sub" id="status">Loading…</p>
+  </div>
+  <div class="trail" id="trail"></div>
+  <div id="unroll"><p>Your handscroll. Tap to roll it back up.</p><canvas id="unrollC"></canvas></div>
+  <div class="busy" id="busy"></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

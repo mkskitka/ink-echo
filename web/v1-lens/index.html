@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#f3eee3">
+  <link rel="icon" type="image/png" href="../icon-180.png">
+  <link rel="apple-touch-icon" href="../icon-180.png">
+  <title>Ink Echo · Lens</title>
+  <link rel="stylesheet" href="../shared/base.css">
+  <style>
+    .ladder {
+      position: fixed; right: 10px; bottom: calc(env(safe-area-inset-bottom) + 12px); z-index: 4;
+      display: flex; gap: 8px;
+    }
+    .ladder button {
+      border: 0; padding: 0; background: var(--chip-strong); border-radius: 10px; overflow: hidden;
+      display: flex; flex-direction: column; align-items: center; box-shadow: 0 1px 4px rgba(0,0,0,.15);
+    }
+    .ladder canvas { width: 92px; height: 92px; display: block; }
+    .ladder span { font-size: 12px; padding: 3px 0 5px; color: var(--muted); }
+    .ladder button.active { outline: 2px solid var(--seal); }
+    .caption { bottom: calc(env(safe-area-inset-bottom) + 134px); }
+    .zoombar { position: fixed; left: 10px; bottom: calc(env(safe-area-inset-bottom) + 112px); z-index: 4;
+      font-size: 12px; color: var(--muted); }
+    @media (max-width: 480px) { .ladder canvas { width: 76px; height: 76px; } }
+  </style>
+</head>
+<body>
+  <div class="stage" id="stage">
+    <img class="painting" id="painting" alt="">
+    <canvas class="pad" id="pad"></canvas>
+  </div>
+  <div class="badge"><b>Lens</b>Zoom-aware matching</div>
+  <nav class="toolbar">
+    <a href="../">Versions</a>
+    <button id="undo">Undo</button>
+    <button id="clear">Clear</button>
+    <button id="lines" aria-pressed="true">Lines</button>
+  </nav>
+  <div class="hint" id="hint">
+    <p class="title">Lens</p>
+    <p>Draw with thin lines. The camera flies into the painting at whatever zoom your lines fit: a single brushstroke or the whole composition.</p>
+    <p class="sub" id="status">Loading…</p>
+  </div>
+  <div class="caption" id="caption" hidden></div>
+  <div class="zoombar" id="zoombar"></div>
+  <div class="ladder" id="ladder"></div>
+  <div class="busy" id="busy"></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

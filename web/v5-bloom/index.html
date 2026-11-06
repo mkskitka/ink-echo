@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#f3eee3">
+  <link rel="icon" type="image/png" href="../icon-180.png">
+  <link rel="apple-touch-icon" href="../icon-180.png">
+  <title>Ink Echo · Bloom</title>
+  <link rel="stylesheet" href="../shared/base.css">
+  <style>
+    #bloom { mix-blend-mode: multiply; }
+    .toast {
+      position: fixed; left: 50%; top: 40%; transform: translate(-50%, -50%); z-index: 6;
+      background: var(--chip-strong); padding: 10px 16px; border-radius: 10px; font-size: 16px;
+      opacity: 0; transition: opacity 0.4s; pointer-events: none; text-align: center;
+    }
+    .toast.on { opacity: 1; }
+    .flowmeter { position: fixed; left: 50%; transform: translateX(-50%); top: calc(env(safe-area-inset-top) + 70px);
+      font-size: 13px; color: var(--muted); z-index: 4; pointer-events: none; }
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <canvas class="layer" id="bloom"></canvas>
+    <canvas class="pad" id="pad"></canvas>
+  </div>
+  <div class="badge"><b>Bloom</b>Ink flows along the master's strokes</div>
+  <nav class="toolbar">
+    <a href="../">Versions</a>
+    <button id="undo">Undo</button>
+    <button id="clear">Clear</button>
+    <button id="lines" aria-pressed="true">Lines</button>
+  </nav>
+  <div class="flowmeter" id="flowmeter"></div>
+  <div class="hint" id="hint">
+    <p class="title">Bloom</p>
+    <p>Draw a line. Where it touches a painter's actual ink, the ink starts to flow along their connected strokes and reveals the painting stroke by stroke.</p>
+    <p>Longer, more confident lines carry more ink.</p>
+    <p class="sub" id="status">Loading…</p>
+  </div>
+  <div class="toast" id="toast"></div>
+  <div class="caption" id="caption" hidden></div>
+  <div class="busy" id="busy"></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
