@@ -124,6 +124,7 @@ the same way (±30°); **clutter** = ink coverage in a band around your line.
 | Original engine | 0.49 | 0.40 |
 | Hi-res maps, mount/edge suppression, clutter + direction terms | 0.56 | 0.27 |
 | + continuity term, no zoom-out bias, snap warp | 0.61 | 0.29 |
+| + picture areas, 7,874 views (album leaves, details, manual pages) | 0.62 | 0.28 |
 | Upper bound: gestures traced from real painted strokes | 0.67 | – |
 
 So free gestures now come close to what the corpus can give a rigid pose. What changed:
