@@ -2,59 +2,82 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Ink Echo">
   <meta name="theme-color" content="#f3eee3">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icon-180.png">
   <link rel="icon" type="image/png" href="icon-180.png">
   <title>Ink Echo</title>
-  <link rel="stylesheet" href="style.css">
+  <style>
+    :root { --paper: #f3eee3; --ink: #1b1915; --muted: #6f685b; --chip: rgba(27,25,21,.08); --seal: #a8322a; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--paper); color: var(--ink); min-height: 100vh;
+      font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+      padding: calc(env(safe-area-inset-top) + 28px) 16px calc(env(safe-area-inset-bottom) + 28px);
+    }
+    main { max-width: 880px; margin: 0 auto; }
+    header { display: flex; gap: 14px; align-items: center; margin-bottom: 8px; }
+    header img { width: 52px; height: 52px; border-radius: 12px; }
+    h1 { font-size: 30px; font-weight: 600; }
+    .lede { color: var(--muted); font-size: 16px; line-height: 1.5; margin: 6px 0 22px; max-width: 640px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+    a.card {
+      display: block; text-decoration: none; color: inherit; background: #fbf8f1;
+      border: 1px solid var(--chip); border-radius: 14px; padding: 16px 16px 18px;
+      transition: transform .15s, box-shadow .15s;
+    }
+    a.card:hover, a.card:focus-visible { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+    .num { font-size: 12px; color: var(--seal); letter-spacing: .08em; text-transform: uppercase; }
+    .card h2 { font-size: 21px; margin: 4px 0 6px; }
+    .card p { font-size: 14.5px; line-height: 1.45; color: #3d3830; }
+    .card .how { margin-top: 10px; font-size: 13px; color: var(--muted); font-style: italic; }
+    a.card.v0 { background: transparent; }
+    footer { margin-top: 26px; font-size: 13px; color: var(--muted); line-height: 1.5; }
+    footer a { color: var(--seal); }
+  </style>
 </head>
 <body>
-  <main id="stage">
-    <div id="ghost" aria-hidden="true"></div>
-    <canvas id="reveal" aria-hidden="true"></canvas>
-    <canvas id="ink" aria-label="Drawing surface"></canvas>
-    <div id="hint">
-      <p class="title">Ink Echo</p>
-      <p>Draw a line. Ink paintings from The Met answer it.</p>
-      <p class="sub" id="status">Loading the collection…</p>
+  <main>
+    <header><img src="icon-180.png" alt=""><h1>Ink Echo</h1></header>
+    <p class="lede">Draw with a finger or Apple Pencil, and ink paintings from The Met answer your lines. Five experiments in matching a drawn gesture to the brushstrokes a painter actually made.</p>
+    <div class="grid">
+      <a class="card" href="v1-lens/">
+        <div class="num">Version 1</div><h2>Lens</h2>
+        <p>Zoom-aware matching. Your lines are fitted at every zoom, position and slight rotation, and the camera flies into the painting at the scale where they fit. A zoom ladder offers Detail, Passage and Composition.</p>
+        <p class="how">Best for: "this should look like a mountain ridge"</p>
+      </a>
+      <a class="card" href="v2-trace/">
+        <div class="num">Version 2</div><h2>Trace</h2>
+        <p>Your first line picks a painting, then you learn the master's hand: the real strokes near your drawing glow faintly. Strokes that land on them reveal the painting. Miss twice and the brush finds another work.</p>
+        <p class="how">Best for: slow, attentive drawing; Apple Pencil</p>
+      </a>
+      <a class="card" href="v3-collage/">
+        <div class="num">Version 3</div><h2>Collage</h2>
+        <p>Every stroke is its own question. Each one opens a window onto a different painting, posed so that the painter's stroke sits under yours. Idiosyncratic drawings become collages.</p>
+        <p class="how">Best for: many quick, different gestures</p>
+      </a>
+      <a class="card" href="v4-scroll/">
+        <div class="num">Version 4</div><h2>Handscroll</h2>
+        <p>The scroll keeps unrolling as you draw with a velocity-sensitive dry brush. Your ink soaks in and fades, and only the last few seconds of gesture are matched, laying passages from paintings along a scroll you can unroll at the end.</p>
+        <p class="how">Best for: continuous, rhythmic drawing</p>
+      </a>
+      <a class="card" href="v5-bloom/">
+        <div class="num">Version 5</div><h2>Bloom</h2>
+        <p>Where your line touches a painter's actual ink, ink starts to flow along their connected strokes and reveals the work in the order a brush could have travelled. Longer lines carry more ink.</p>
+        <p class="how">Best for: watching a painting grow from your mark</p>
+      </a>
+      <a class="card v0" href="v0-original/">
+        <div class="num">Version 0</div><h2>Original</h2>
+        <p>The first prototype: a whole-drawing contour match with Ghost and Reveal modes.</p>
+      </a>
     </div>
+    <footer>
+      Images and data: <a href="https://www.metmuseum.org/about-the-met/policies-and-documents/open-access" target="_blank" rel="noopener">The Metropolitan Museum of Art, Open Access</a> (CC0), via the <a href="https://metmuseum.github.io/" target="_blank" rel="noopener">Collection API</a>.
+      On iPhone or iPad, use Share → Add to Home Screen to run it full-screen.
+    </footer>
   </main>
-
-  <nav id="toolbar">
-    <button id="undo" aria-label="Undo last stroke">Undo</button>
-    <button id="clear" aria-label="Clear drawing">Clear</button>
-    <button id="mode" aria-label="Display mode">Ghost</button>
-    <button id="ink-toggle" aria-pressed="true" aria-label="Show my strokes">Lines</button>
-  </nav>
-
-  <aside id="caption" hidden>
-    <button id="caption-open" aria-label="About this work">
-      <span id="caption-title"></span>
-      <span id="caption-meta"></span>
-    </button>
-  </aside>
-
-  <section id="matches" aria-label="Matching works"></section>
-
-  <dialog id="sheet">
-    <form method="dialog"><button class="close" aria-label="Close">Close</button></form>
-    <img id="sheet-img" alt="">
-    <h2 id="sheet-title"></h2>
-    <p id="sheet-meta"></p>
-    <p id="sheet-medium"></p>
-    <p class="sheet-actions">
-      <a id="sheet-link" target="_blank" rel="noopener">View on metmuseum.org</a>
-      <button id="sheet-next" type="button">Show another match</button>
-    </p>
-    <p class="credit">The Metropolitan Museum of Art, Open Access (CC0)</p>
-  </dialog>
-
-  <script type="module" src="app.js"></script>
 </body>
 </html>
