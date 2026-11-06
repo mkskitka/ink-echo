@@ -6,6 +6,7 @@ const CSS = `
   display: flex; align-items: center; justify-content: center; font: 11px system-ui, sans-serif; color: rgba(255,255,255,.85); }
 .well[aria-pressed="true"] { outline: 2px solid var(--seal); outline-offset: 3px; }
 .well span { pointer-events: none; }
+.well.snd { outline: none !important; box-shadow: 0 1px 4px rgba(0,0,0,.15); font-size: 16px; }
 body:has(.wells) .caption { left: 68px; max-width: min(calc(100vw - 80px), 460px); }
 .toast { position: fixed; left: 50%; top: calc(env(safe-area-inset-top) + 64px); transform: translateX(-50%); z-index: 9;
   background: rgba(27,25,21,.82); color: #f3eee3; font: 14px system-ui, sans-serif; padding: 8px 14px; border-radius: 999px;
@@ -46,6 +47,19 @@ export function inkwells(brush, { onDip } = {}) {
   document.body.append(box);
   brush.opts.tone = tones[0].tone; brush.opts.water = tones[0].water;
   return box;
+}
+
+/** A small speaker button above the inkwells. */
+export function soundToggle(sound) {
+  style();
+  const b = document.createElement("button");
+  b.className = "well snd"; b.style.background = "rgba(243,238,227,.9)"; b.style.color = "#2a241c";
+  b.setAttribute("aria-label", "Brush sound"); b.setAttribute("aria-pressed", "true");
+  b.innerHTML = "<span>♪</span>";
+  b.onclick = () => { const on = sound.toggle(); b.setAttribute("aria-pressed", String(on)); b.style.opacity = on ? 1 : 0.45; };
+  const wells = document.querySelector(".wells");
+  if (wells) wells.prepend(b); else { b.style.position = "fixed"; b.style.left = "12px"; b.style.bottom = "calc(env(safe-area-inset-bottom) + 12px)"; b.style.zIndex = 5; document.body.append(b); }
+  return b;
 }
 
 let toastEl = null, toastT = 0;

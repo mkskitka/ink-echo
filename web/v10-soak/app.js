@@ -9,7 +9,8 @@ import { InkPaper, paperBackground } from "../shared/inkpaper.js";
 import { Brush } from "../shared/brush.js";
 import { setCaption, pictureEdge } from "../shared/view.js";
 import { openColophon } from "../shared/colophon.js";
-import { inkwells, toast } from "../shared/ui.js";
+import { inkwells, toast, soundToggle } from "../shared/ui.js";
+import { BrushSound } from "../shared/brushsound.js";
 
 const $ = (id) => document.getElementById(id);
 const INK = 70;
@@ -19,6 +20,7 @@ const paper = new InkPaper($("ink"), { paper: paperKind });
 const soak = new InkPaper($("reveal"), { paper: paperKind, maxPixels: 1.6e6 });
 const brush = new Brush($("hit"), paper, { size: 6.5 });
 inkwells(brush);
+soundToggle(new BrushSound(brush));
 if (!paper.ok) $("status").textContent = "This browser has no WebGL2, so the paper can't be simulated.";
 
 let engine = null, anchor = null, frontier = [], budget = 0, layerNo = 0, dry = 0, ghostOn = false;

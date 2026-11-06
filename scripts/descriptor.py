@@ -85,6 +85,10 @@ def suppress_long_lines(ink: np.ndarray, frac: float = 0.22) -> np.ndarray:
         thick = cv2.morphologyEx(b, cv2.MORPH_OPEN, np.ones(across, np.uint8))
         kill |= run & (1 - thick)
         kill[edge] |= run[edge]                             # frames: any thickness near the border
+    # gaps and seams that cross the whole picture (e.g. between a pair of scrolls
+    # photographed side by side): any thickness, if dead straight for 90% of it
+    for along in ((1, int(w * 0.9)), (int(h * 0.9), 1)):
+        kill |= cv2.morphologyEx(b, cv2.MORPH_OPEN, np.ones(along, np.uint8))
     if kill.any():
         kill = cv2.dilate(kill, np.ones((5, 5), np.uint8))
         ink = ink.copy()

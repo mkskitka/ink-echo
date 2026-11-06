@@ -31,7 +31,10 @@ def main():
     print(f"curated {len(keep)} of {len(objs)} works; dropped {why}")
     # views: the Met's additional images of curated works (album leaves, details)
     kept = set(map(str, keep))
-    views, vwhy = [], {"pigment": 0, "backdrop": 0}
+    MAX_VIEWS = 10
+    books = {str(o["id"]) for o in objs if (o.get("classification") or "").lower() in ("illustrated books", "prints")}
+    per = {}
+    views, vwhy = [], {"pigment": 0, "backdrop": 0, "cap": 0}
     for p in sorted((ROOT / "data" / "images").glob("*_*.jpg")):
         parent = p.stem.split("_")[0]
         if parent not in kept or not (ROOT / "web" / "hi" / f"{p.stem}.jpg").exists():
@@ -41,6 +44,10 @@ def main():
             vwhy["pigment"] += 1; continue
         if s and s["backdrop"] > 0.9:      # objects photographed on a backdrop: boxes, rollers, backs
             vwhy["backdrop"] += 1; continue
+        cap = 60 if parent in books else MAX_VIEWS          # manuals and sketchbooks: keep many pages
+        if per.get(parent, 0) >= cap:
+            vwhy["cap"] += 1; continue
+        per[parent] = per.get(parent, 0) + 1
         views.append(p.stem)
     (ROOT / "data" / "curated_views.json").write_text(json.dumps(views))
     print(f"views: {len(views)} additional images kept; dropped {vwhy}")

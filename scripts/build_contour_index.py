@@ -98,7 +98,9 @@ def main():
                               "image": urls[int(k)].replace("/original/", "/web-large/"), "imageLarge": urls[int(k)]})
     hi = lambda o: WEB / "hi" / f"{o['id']}.jpg"  # noqa: E731
     boxes = json.loads((DATA / "boxes.json").read_text()) if (DATA / "boxes.json").exists() else {}
-    jobs = [(hi(o) if hi(o).exists() else DATA / "images" / f"{o['id']}.jpg", args.per_work, boxes.get(str(o["id"]))) for o in objects]
+    # views are close-ups already: fewer regions each keeps the index small for phones
+    jobs = [(hi(o) if hi(o).exists() else DATA / "images" / f"{o['id']}.jpg",
+             args.per_work if "parent" not in o else max(8, args.per_work // 3), boxes.get(str(o["id"]))) for o in objects]
 
     det_path = DATA / "details.json"
     det = json.loads(det_path.read_text(encoding="utf-8")) if det_path.exists() else {}

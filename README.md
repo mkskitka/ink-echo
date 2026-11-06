@@ -20,25 +20,60 @@ All images and data come from [The Met Collection API](https://metmuseum.github.
 ```bash
 pip install -r requirements.txt
 
-# 1. Download ink paintings + calligraphy (public domain, Asian Art dept).
-#    About 15 min for the full corpus; incremental, so it's safe to stop and resume.
-python scripts/fetch_ink_paintings.py            # or: --max 300 for a quick sample
+# 1. Download ink paintings + calligraphy (public domain, Asian Art dept) and their metadata.
+python scripts/fetch_ink_paintings.py        # web-large copies -> data/images/
+python scripts/fetch_details.py              # period, artist bio, tags, additional images -> data/details.json
 
-# 2. Build the contour index (writes web/index.json + web/index.bin)
-#    and the per-painting ink maps used for fine alignment (web/ink/*.jpg).
-python scripts/build_contour_index.py
-python scripts/build_ink_maps.py
+# 2. Sharper sources (optional but recommended; about 5 GB + 10 GB, gitignored in web/hi/).
+python scripts/fetch_originals.py            # full-resolution originals, long side <= 4096
+python scripts/fetch_additional.py           # album leaves and detail photos ("views")
 
-# 3. Serve it on your Wi-Fi and open the printed URL on your iPhone/iPad.
+# 3. Curate and build.
+python scripts/corpus_stats.py               # colourfulness / backdrop per image
+python scripts/curate.py                     # East Asian ink works (+ their views)
+python scripts/picture_box.py                # find the picture inside mounts and frames
+python scripts/build_ink_maps.py             # web/ink/<id>.jpg (alignment maps)
+python scripts/build_contour_index.py        # web/index.json + web/index.bin
+
+# 4. Serve it on your Wi-Fi and open the printed URL on your iPhone/iPad.
 python serve.py
 ```
 
 On iOS, use Share → **Add to Home Screen** to run it full-screen like an app.
 
-The built index is committed, so after cloning you can go straight to step 3. The
-`web/` folder is a static site, so it can also be hosted on GitHub Pages.
+The built index and ink maps are committed, so after cloning you can go straight to
+step 4. Without `web/hi/`, the app falls back to the Met's own (softer) images.
 
-## Five interaction experiments
+## With real ink (versions 6–10)
+
+These simulate the brush and the paper (`web/shared/inkpaper.js`, `brush.js`):
+
+- **Paper** (WebGL2): water wicks through a fibre field, so wet strokes feather on
+  raw xuan paper; pigment rides the water more slowly and settles as the paper dries,
+  darker at the drying edge. Sized paper and silk barely wick: lines stay crisp.
+- **Brush**: a fixed ink load that each dab spends, so a long or fast stroke runs dry
+  into *flying white* (飛白); Pencil pressure (or finger slowness) widens the line;
+  **Pencil tilt** lays the side of the brush down (側鋒, side tip) for broad,
+  one-edged texture strokes; holding still pools ink into the paper. Strokes can't be
+  erased, as on real paper.
+- **Inkwells**: thick, middle and pale ink (濃 重 淡), after "ink has five colours".
+- **Brush sound**: filtered noise that follows speed and pressure, grainier when dry.
+- **Colophon** (`colophon.js`): the closing pages. Your brushwork read the way a
+  teacher would (pressure, speed, tip, concealed entry, flying white), then each work
+  you met, shown sharp at the passage your line found, with how it was made (format,
+  school, period, paper or silk), its brushwork measured from its ink and compared
+  with yours, and what the hands have in common and where they differ. Teaching
+  content lives in `lore.js`.
+
+| Version | From | Idea |
+|---|---|---|
+| **6 · Sumi Scroll** (`v6-sumi/`) | Handscroll | The unrolling scroll, painted with real ink. A passage is laid only where a master's stroke truly continues yours (at least 30% of your line on a painted line going the same way). *Ink only* shows their brushwork alone on your paper; *With silk* shows their surface too. Finish → unroll → colophon. |
+| **7 · Contemplation** (`v7-contemplation/`) | Bloom, meditative | Grind ink on an inkstone, paced by a breathing ring (slower circles grind better; longer grinding gives darker ink). Choose one of three works (a new three each day). The work lies faint at full resolution; trace the painter's brush and their strokes come up sharp. Quiet notes say what the brush is doing in each passage. *Move along* goes passage by passage (right to left on a handscroll) while your strokes fade like water-writing on stone. *Rest the brush* shows the whole work, then its colophon. |
+| **8 · Brush Lessons** (`v8-lessons/`) | Collage, embodied | Learning by copying (臨摹): a model stroke plays in pale ink with a teacher's timing and pressure (永 and its eight principles, ensō, bamboo stalk and leaves, orchid, plum, rock); you copy it, get a reading of your mechanics, and meet a master's stroke of the same subject (filtered by Met tags). |
+| **9 · Many Hands** (`v9-hands/`) | Collage | Each stroke meets a different master; a card per hand describes their brush in that passage. *Compare the hands* writes the comparison. |
+| **10 · Soak** (`v10-soak/`) | Bloom | Where your line meets a painter's ink, the painting soaks up through a simulated paper along their connected strokes: feathered on xuan, crisp on silk. |
+
+## The first experiments (versions 0–5)
 
 The root page (`web/index.html`) is a launcher. Every version shares one engine
 (`web/shared/`) and differs in how drawing and matching meet:
@@ -75,7 +110,47 @@ Known limits: deep zooms into very wide handscrolls look soft, because the Met's
 `web-large` image is spread across the whole scroll. Straight strokes tend to find
 straight mount edges.
 
-## How matching works (v0 / coarse search)
+## Stroke alignment (Nov 2026 rework)
+
+The question that matters: when a passage appears, does a painted stroke really run
+under your line? `scripts/eval_alignment.py` measures it. It drives the real engine
+in a headless browser with 96 finger-like gestures (curves, arcs, ridges, loops,
+pairs…) and scores each returned pose against a sharp reference of the painting:
+**follow** = share of your line with a painted centreline within 6 screen px running
+the same way (±30°); **clutter** = ink coverage in a band around your line.
+
+| | follow ↑ | clutter ↓ |
+|---|---|---|
+| Original engine | 0.49 | 0.40 |
+| Hi-res maps, mount/edge suppression, clutter + direction terms | 0.56 | 0.27 |
+| + continuity term, no zoom-out bias, snap warp | 0.61 | 0.29 |
+| Upper bound: gestures traced from real painted strokes | 0.67 | – |
+
+So free gestures now come close to what the corpus can give a rigid pose. What changed:
+
+- **Sharper data**: alignment maps built from the Met's full-resolution originals
+  (320 px short side, up from 160 from a 600 px copy); views show our hi-res copies.
+- **Cleaner data**: East Asian ink works only (no Indian or Tibetan painting, no
+  heavily pigmented works); long straight lines erased from the ink maps (mount
+  edges, frames, panel seams); the **picture area** found inside mounts and photo
+  backdrops (`picture_box.py`) so brocade and borders can't attract lines, and
+  displays fade out at the painting's edge.
+- **More data**: the Met's *additional images* (album leaves, handscroll details,
+  photographed at full resolution) are matched as views of their works.
+- **Scoring** (`engine-worker.js`): distance to painted ink; **direction** against the
+  painting's structure tensor; **clutter** (a line inside dense texture or a wash is
+  not a match); **continuity** (walking along your line, the nearest painted point
+  should walk with you: one stroke, not hops between marks); the discrimination test.
+- **Snap**: robust point-to-line ICP refines the pose to sub-pixel accuracy, and the
+  leftover offsets become a gentle, clamped warp (at most 5% of the drawing) so the
+  painter's stroke lands exactly under yours (`view.js drawWarped`).
+- **Honesty**: each result reports `follow`; the new versions show nothing rather
+  than a passage that doesn't really continue your line. Passages are revealed
+  wider where your line hits a painted stroke and narrower where it doesn't.
+- **Speed**: 28 candidates per gesture (up from 12), refined only at the 8 best poses;
+  ink maps for likely paintings are prefetched while you're still drawing.
+
+## How matching works (coarse search)
 
 ```
 painting ─► ink map ─► many square regions ─► 128-d contour descriptor ─┐
@@ -109,17 +184,35 @@ touched the screen once, finger touches are ignored, which acts as palm rejectio
 
 ```
 web/                    static app (open web/index.html via any static server)
-  app.js                drawing, matching, display modes
+  index.html            launcher
+  v0-original … v10-soak/  the versions
+  shared/
+    engine.js, engine-worker.js   coarse search + alignment + snap (worker)
+    view.js             passage rendering, warp, picture-edge fade, soft masks
+    pad.js              the original thin dynamic brush (versions 1-5)
+    inkpaper.js         GPU ink-on-paper simulation (and painting reveal)
+    brush.js            ink load, pressure, tilt, dry brush, stroke mechanics
+    brushsound.js       the sound of the brush
+    lore.js             techniques, lessons, how works were made, brushwork measures
+    colophon.js         the closing pages
+    ui.js               inkwells, sound toggle, toasts
+  lab/                  dev pages: eval.html (alignment harness), ink.html (brush lab)
   descriptor.js         JS twin of scripts/descriptor.py
-  search-worker.js      region search off the main thread
-  index.json/.bin       built contour index (works + regions + descriptors)
+  index.json/.bin       built contour index (works + views + regions + descriptors)
+  ink/                  alignment ink maps
+  hi/                   hi-res copies of originals and views (gitignored)
 scripts/
-  fetch_ink_paintings.py   Met API → data/objects.json + data/images/ (images gitignored)
-  build_contour_index.py   images → web/index.*
-  descriptor.py            ink map + descriptor
+  fetch_ink_paintings.py   Met API -> data/objects.json + data/images/
+  fetch_details.py         period, artist bio, tags, additional images -> data/details.json
+  fetch_originals.py, fetch_additional.py      hi-res sources -> web/hi/
+  corpus_stats.py, curate.py, picture_box.py   what to use, and where the picture is
+  build_ink_maps.py, build_contour_index.py    -> web/ink/, web/index.*
+  descriptor.py            ink map (+ straight-edge suppression) + descriptor
+  eval_alignment.py        alignment benchmark (see above)
   make_icons.py            home-screen icons
 data/
-  objects.json          metadata for every downloaded work
+  objects.json, details.json   metadata for every downloaded work
+  curated.json, curated_views.json, boxes.json, corpus_stats.json   build inputs
   seeds.json            works that are always included (the project's reference pieces)
 serve.py                LAN server for testing on a phone/tablet
 ```
@@ -145,7 +238,10 @@ serve.py                LAN server for testing on a phone/tablet
   dataset is gated: the local HF token needs *"read access to public gated repos"*
   turned on in its fine-grained settings.
 - Learned sketch-to-image retrieval: train a small CNN on (edge map, painting
-  region) pairs to replace the hand-made descriptor.
+  region) pairs to replace the hand-made descriptor. The eval harness and the
+  traced-stroke oracle (`--traced`) are ready to measure it.
+- A per-stroke non-rigid fit (each of your strokes snapped to its own painted
+  stroke) would go past the 0.67 rigid ceiling, at some cost to faithfulness.
 - Stroke-order-aware matching for calligraphy.
 - Export: save a composite of drawing + painting. This would need CORS-enabled
   image fetches, because the canvas is currently tainted.

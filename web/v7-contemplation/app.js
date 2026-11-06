@@ -14,7 +14,8 @@ import { Brush } from "../shared/brush.js";
 import { pictureEdge, applySoftMask } from "../shared/view.js";
 import { openColophon } from "../shared/colophon.js";
 import { describeWork, measurePassage, brushWords, TECHNIQUES } from "../shared/lore.js";
-import { toast } from "../shared/ui.js";
+import { toast, soundToggle } from "../shared/ui.js";
+import { BrushSound } from "../shared/brushsound.js";
 
 const $ = (id) => document.getElementById(id);
 const INK = 70;
@@ -23,6 +24,7 @@ paperBackground($("paper"), { kind: "xuan", tint: [235, 227, 208] });
 const paper = new InkPaper($("ink"), { paper: "xuan" });
 const brush = new Brush($("hit"), paper, { size: 6, tone: 0.75, water: 0.6 });
 brush.disabled = true;
+soundToggle(new BrushSound(brush, { volume: 0.16 }));
 const view = $("view");
 let engine = null;
 Engine.create("../").then((e) => { engine = e; prepareChoices(); }).catch((err) => console.error(err));
