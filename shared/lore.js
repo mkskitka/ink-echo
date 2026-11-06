@@ -132,6 +132,18 @@ export const TREASURES = {
   paper: "Raw xuan paper (宣紙) drinks ink at once, so a stroke cannot be corrected. Japanese washi, made from mulberry fibre, behaves similarly. Silk is usually sized with alum and glue, so lines stay crisp and washes can be layered.",
 };
 
+/** Holding the brush: the classical five-finger grip (五指執筆法). */
+export const GRIP = {
+  title: "Before you begin: holding the brush",
+  steps: [
+    "Hold the brush upright, perpendicular to the paper, a little above the middle of the handle.",
+    "Five fingers each have a job (擫押鉤格抵): the thumb presses the handle from the inside; the index finger holds it from the outside; the middle finger hooks around it; the ring finger pushes back against it with the nail side; the little finger rests behind the ring finger and supports it.",
+    "\"Fingers solid, palm hollow\" (指實掌虛): the fingers are firm, but the palm stays open, as if holding an egg in it.",
+    "Lift the wrist off the paper and let the arm move from the shoulder; breathe out as the brush travels.",
+    "With an Apple Pencil: hold it upright in the same grip and keep it light. Tilt it over only when you want the side of the brush.",
+  ],
+};
+
 // ---------------------------------------------------------------- lessons
 // The Mustard Seed Garden Manual of Painting (芥子園畫傳, first part 1679)
 // taught painting stroke by stroke through set subjects. These follow that idea.

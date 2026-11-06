@@ -41,7 +41,7 @@ async function meet(stroke) {
     const r = await engine.match([stroke], { k: 28, alignK: 4, exclude });
     if (!r || !r.results.length) return;
     const best = r.results[0];
-    if (best.follow < 0.25) { toast("No master's stroke runs quite like that one. It stays yours."); return; }
+    if (best.follow < 0.55) { toast("No master's stroke runs quite like that one. It stays yours."); return; }
     const p = await renderPassage(engine, best, r.frame, [stroke], { band: Math.max(56, r.frame.S * 0.4), inkOnly: true });
     const color = COLORS[windows.length % COLORS.length];
     windows.push({ ...p, work: best.work, born: performance.now(), color });

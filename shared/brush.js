@@ -68,6 +68,9 @@ export class Brush {
       }
     }
     const tip = pen ? Math.min(1, Math.max(0, (1.25 - alt) / 0.75)) : 0; // upright .. ~30 deg tilt
+    // which way the brush leans (the belly lies on that side of the stroke)
+    let az = 0;
+    if (pen) az = typeof e.azimuthAngle === "number" ? e.azimuthAngle : Math.atan2(e.tiltY || 0, e.tiltX || 0);
     const v = prev ? Math.hypot(sx - prev.sx, sy - prev.sy) / Math.max(1, t - prev.t) : 0; // px/ms
     let press;
     if (pen) press = Math.min(1, Math.max(0.05, e.pressure || 0.4));
@@ -76,7 +79,7 @@ export class Brush {
       const target = Math.min(1, Math.max(0.15, 1.05 - v * 0.55));
       press = prev ? prev.press * 0.75 + target * 0.25 : target * 0.7;
     }
-    return { sx, sy, x: sx + this.offset.x, y: sy + this.offset.y, t, v, press, tip, pen };
+    return { sx, sy, x: sx + this.offset.x, y: sy + this.offset.y, t, v, press, tip, az, pen };
   }
 
   _down(e) {
@@ -131,6 +134,9 @@ export class Brush {
       const t = i / steps;
       const x = a.sx + (b.sx - a.sx) * t, y = a.sy + (b.sy - a.sy) * t;
       const q = { press: a.press + (b.press - a.press) * t, tip: a.tip + (b.tip - a.tip) * t };
+      // belly side: + if the brush leans toward the stroke's left normal, - if toward its right
+      const lean = Math.cos(b.az || 0) * -dy + Math.sin(b.az || 0) * dx;
+      const tipSigned = q.tip * (lean >= 0 ? 1 : -1);
       let r = this._radius(q);
       const entry = Math.min(1, 0.45 + n * 0.08);            // the tip touches down first
       r *= entry;
@@ -139,7 +145,7 @@ export class Brush {
       const dry = Math.min(1, Math.max(0, (1 - this.load) * 1.2 - 0.3 + v * 0.38 * (1.35 - this.load) + (0.45 - this.water) * 0.7));
       const wet = this.water * (0.35 + 0.65 * this.load) * Math.max(0.25, 1 - v * 0.35);
       const ink = this.opts.tone * (0.25 + 0.75 * this.load);
-      this.paper.dab(x, y, r, dx, dy, wet * (0.1 + 0.08 * Math.max(0, 1 - v * 2)), ink * 0.2, dry, q.tip, this.seed, 1 + q.tip * 0.4);
+      this.paper.dab(x, y, r, dx, dy, wet * (0.1 + 0.08 * Math.max(0, 1 - v * 2)), ink * 0.2, dry, tipSigned, this.seed, 1 + q.tip * 0.4);
       // spend ink: more for wider, wetter dabs
       const spend = (d / steps) * r * 0.00034 * (0.6 + this.water) / this.opts.capacity;
       this.load = Math.max(0, this.load - spend);
