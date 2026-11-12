@@ -414,11 +414,19 @@ export class InkPaper {
 
   _frame(t) {
     if (!this.ok) return;
-    const dt = Math.min(1 / 30, ((t - (this._t || t)) / 1000) || 1 / 60);
+    // Fixed 60 Hz simulation clock: high-refresh displays (120-240 Hz) would otherwise
+    // run the full-screen sim passes 2-4x as often for the same visual result.
+    const TICK = 1 / 60;
+    const elapsed = ((t - (this._t || t)) / 1000) || 0;
     this._t = t;
     this._flush();
-    if (this.wet) {
+    if (!this.wet) this._acc = null;
+    else if (this._acc == null) this._acc = TICK;  // ink just went down: simulate this frame
+    else this._acc = Math.min(this._acc + elapsed, 2 * TICK); // at most 2 ticks per frame, no spiral
+    while (this.wet && this._acc >= TICK) {
+      this._acc -= TICK;
       const P = this.paper;
+      const dt = TICK;
       const steps = 2;
       for (let i = 0; i < steps; i++) {
         this._pass(this.p.sim, this.fbo[1 - this.cur], { S: this.tex[this.cur], F: this.fibre }, {

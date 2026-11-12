@@ -87,6 +87,16 @@ function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
   if (flowing && started && pad.pointer === null) pad.offset.x += DRIFT * dt;
+  requestAnimationFrame(frame);
+  // Only repaint when something visible changed: the scroll moved a whole device
+  // pixel, you're drawing, ink is still soaking in, or a passage is fading in.
+  const dprNow = layer.width / layer.clientWidth;
+  const px = Math.round(pad.offset.x * dprNow), py = Math.round(pad.offset.y * dprNow);
+  const soaking = pad.strokes.some((s) => !s.t1 || now - s.t1 < SOAK_MS);
+  const fading = passages.some((p) => now - p.born < 1200);
+  const sized = layer.width !== lastPaint.w || layer.height !== lastPaint.h || passages.length !== lastPaint.n;
+  if (px === lastPaint.x && py === lastPaint.y && pad.pointer === null && !soaking && !fading && !sized && !lastPaint.trailing) return;
+  lastPaint = { x: px, y: py, w: layer.width, h: layer.height, n: passages.length, trailing: soaking || fading };
   // the pad keeps drawing in world coords while the scroll moves
   pad.redraw((s) => {
     const age = s.t1 ? now - s.t1 : 0;
@@ -103,8 +113,8 @@ function frame(now) {
     g.drawImage(p.canvas, sx * dpr, (p.y - pad.offset.y) * dpr, p.w * dpr, p.h * dpr);
   }
   g.globalAlpha = 1;
-  requestAnimationFrame(frame);
 }
+let lastPaint = {};
 requestAnimationFrame(frame);
 
 // ---------------------------------------------------------------- unroll view

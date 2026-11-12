@@ -102,6 +102,13 @@ function frame(now) {
       paper.shift(-step, 0);
     }
   }
+  requestAnimationFrame(frame);
+  // Only repaint the passages layer when it would look different: the scroll
+  // moved, a passage is fading in, or the canvas/passage list changed.
+  const fading = passages.some((p) => now - p.born < 1400);
+  const key = `${brush.offset.x},${brush.offset.y},${layer.width},${layer.height},${passages.length}`;
+  if (key === lastPaint && !fading && !fadedLast) return;
+  lastPaint = key; fadedLast = fading;
   const g = layer.getContext("2d");
   const dpr = layer.width / layer.clientWidth;
   g.setTransform(1, 0, 0, 1, 0, 0);
@@ -113,8 +120,8 @@ function frame(now) {
     g.drawImage(p.canvas, sx * dpr, (p.y - brush.offset.y) * dpr, p.w * dpr, p.h * dpr);
   }
   g.globalAlpha = 1;
-  requestAnimationFrame(frame);
 }
+let lastPaint = "", fadedLast = false;
 requestAnimationFrame(frame);
 
 // ---------------------------------------------------------------- finish
